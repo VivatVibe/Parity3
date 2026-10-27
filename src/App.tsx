@@ -26,6 +26,15 @@ export default function App() {
     setSelectedInvoice(newInv); // Open preview immediately
   };
 
+  const handleUpdateInvoice = (updatedInv: Invoice) => {
+    const updated = invoices.map(inv => (inv.id === updatedInv.id ? updatedInv : inv));
+    setInvoices(updated);
+    saveInvoices(updated);
+    if (selectedInvoice && selectedInvoice.id === updatedInv.id) {
+      setSelectedInvoice(updatedInv);
+    }
+  };
+
   const handleToggle50Tawi = (id: string) => {
     const updated = invoices.map(inv => {
       if (inv.id === id) {
@@ -120,6 +129,7 @@ export default function App() {
           <InvoiceList
             invoices={invoices}
             onSelectInvoice={setSelectedInvoice}
+            onUpdateInvoice={handleUpdateInvoice}
             onToggle50Tawi={handleToggle50Tawi}
             onDeleteInvoice={handleDeleteInvoice}
             onCreateNew={() => setShowCreateModal(true)}

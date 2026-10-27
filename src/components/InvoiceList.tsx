@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Invoice } from '../domain/storage';
 import { TAX_CATEGORIES, TaxCategory } from '../domain/tax';
 import { downloadPnd90Csv } from '../utils/exportCsv';
-import { Plus, CheckCircle2, Clock, Trash2, Printer, Download } from 'lucide-react';
+import { AttachmentModal } from './AttachmentModal';
+import { Plus, CheckCircle2, Clock, Trash2, Printer, Download, Paperclip } from 'lucide-react';
 
 interface Props {
   invoices: Invoice[];
   onSelectInvoice: (invoice: Invoice) => void;
+  onUpdateInvoice: (invoice: Invoice) => void;
   onToggle50Tawi: (invoiceId: string) => void;
   onDeleteInvoice: (invoiceId: string) => void;
   onCreateNew: () => void;
@@ -15,12 +17,14 @@ interface Props {
 export const InvoiceList: React.FC<Props> = ({
   invoices,
   onSelectInvoice,
+  onUpdateInvoice,
   onToggle50Tawi,
   onDeleteInvoice,
   onCreateNew
 }) => {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [attachingInvoice, setAttachingInvoice] = useState<Invoice | null>(null);
 
   const filtered = invoices.filter(inv => {
     const matchesCat = filterCategory === 'all' || inv.category === filterCategory;
@@ -147,15 +151,29 @@ export const InvoiceList: React.FC<Props> = ({
                       <td className="px-4 py-3.5 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <button
+                            onClick={() => setAttachingInvoice(inv)}
+                            className={`p-1.5 rounded transition cursor-pointer relative ${
+                              inv.slipImage || inv.tawiImage
+                                ? 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                                : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
+                            }`}
+                            title="แนบรูปสลิป / รูปใบ 50 ทวิ"
+                          >
+                            <Paperclip className="w-4 h-4" />
+                            {(inv.slipImage || inv.tawiImage) && (
+                              <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                            )}
+                          </button>
+                          <button
                             onClick={() => onSelectInvoice(inv)}
-                            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition"
+                            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition cursor-pointer"
                             title="ดูใบวางบิล / พิมพ์"
                           >
                             <Printer className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => onDeleteInvoice(inv.id)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
                             title="ลบ"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -170,6 +188,17 @@ export const InvoiceList: React.FC<Props> = ({
           </table>
         </div>
       </div>
+
+      {attachingInvoice && (
+        <AttachmentModal
+          invoice={attachingInvoice}
+          onUpdateInvoice={updated => {
+            onUpdateInvoice(updated);
+            setAttachingInvoice(updated);
+          }}
+          onClose={() => setAttachingInvoice(null)}
+        />
+      )}
     </div>
   );
 };

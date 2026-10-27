@@ -3,7 +3,7 @@ import { Invoice, IssuerProfile } from '../domain/storage';
 import { TAX_CATEGORIES } from '../domain/tax';
 import { generatePromptPayQrDataUrl } from '../domain/promptpay';
 import { thaiBahtText } from '../utils/thaiBaht';
-import { X, Printer } from 'lucide-react';
+import { X, Printer, Paperclip, Eye } from 'lucide-react';
 
 interface Props {
   invoice: Invoice;
@@ -13,6 +13,7 @@ interface Props {
 
 export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose }) => {
   const [qrUrl, setQrUrl] = useState<string>('');
+  const [viewAttachment, setViewAttachment] = useState<string | null>(null);
   const categoryMeta = TAX_CATEGORIES[invoice.category];
 
   useEffect(() => {
@@ -32,8 +33,26 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl my-6 border border-slate-200 print:border-none print:shadow-none print:m-0 print:p-0">
         
         {/* Floating Toolbar (hidden in print) */}
-        <div className="no-print flex items-center justify-between px-6 py-3 bg-slate-800 text-white rounded-t-xl">
-          <div className="text-sm font-medium">ตัวอย่างก่อนพิมพ์ (Invoice Preview & Print)</div>
+        <div className="no-print flex flex-wrap items-center justify-between gap-3 px-6 py-3 bg-slate-800 text-white rounded-t-xl">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">ตัวอย่างก่อนพิมพ์ (Invoice Preview & Print)</span>
+            {invoice.slipImage && (
+              <button
+                onClick={() => setViewAttachment(invoice.slipImage!)}
+                className="px-2 py-0.5 bg-emerald-600/80 hover:bg-emerald-500 rounded text-[11px] font-semibold text-white flex items-center gap-1 cursor-pointer"
+              >
+                <Eye className="w-3 h-3" /> ดูสลิปโอนเงิน
+              </button>
+            )}
+            {invoice.tawiImage && (
+              <button
+                onClick={() => setViewAttachment(invoice.tawiImage!)}
+                className="px-2 py-0.5 bg-amber-600/80 hover:bg-amber-500 rounded text-[11px] font-semibold text-white flex items-center gap-1 cursor-pointer"
+              >
+                <Eye className="w-3 h-3" /> ดูใบ 50 ทวิ
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <button
               onClick={handlePrint}
@@ -176,6 +195,28 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
             </div>
           </div>
         </div>
+        {/* Attachment Lightbox Modal */}
+        {viewAttachment && (
+          <div
+            className="no-print fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
+            onClick={() => setViewAttachment(null)}
+          >
+            <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+              <button
+                onClick={() => setViewAttachment(null)}
+                className="absolute -top-10 right-0 text-white hover:text-slate-300 p-2 cursor-pointer"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <img
+                src={viewAttachment}
+                alt="Attachment Document"
+                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-white"
+                onClick={e => e.stopPropagation()}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

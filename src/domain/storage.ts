@@ -26,6 +26,8 @@ export interface Invoice {
   has50Tawi: boolean;
   tawiDocNumber?: string;
   notes?: string;
+  slipImage?: string;
+  tawiImage?: string;
 }
 
 export interface IssuerProfile {
