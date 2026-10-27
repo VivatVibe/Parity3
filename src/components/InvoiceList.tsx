@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Invoice } from '../domain/storage';
 import { TAX_CATEGORIES, TaxCategory } from '../domain/tax';
-import { Plus, CheckCircle2, Clock, Trash2, Printer } from 'lucide-react';
+import { downloadPnd90Csv } from '../utils/exportCsv';
+import { Plus, CheckCircle2, Clock, Trash2, Printer, Download } from 'lucide-react';
 
 interface Props {
   invoices: Invoice[];
@@ -51,13 +52,24 @@ export const InvoiceList: React.FC<Props> = ({
           </select>
         </div>
 
-        <button
-          onClick={onCreateNew}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition"
-        >
-          <Plus className="w-4 h-4" />
-          สร้างใบแจ้งหนี้ใหม่
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => downloadPnd90Csv(invoices)}
+            className="flex items-center justify-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-sm rounded-lg transition border border-slate-300 cursor-pointer"
+            title="ส่งออกรายการทั้งหมดเป็นไฟล์ Excel / CSV"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
+
+          <button
+            onClick={onCreateNew}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg shadow-sm transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            สร้างใบแจ้งหนี้ใหม่
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">

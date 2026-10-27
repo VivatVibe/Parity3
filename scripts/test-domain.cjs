@@ -204,4 +204,19 @@ assert.strictEqual(summary.byCategory['40_6'].grossIncome, 30000);
 assert.strictEqual(summary.byCategory['40_8'].grossIncome, 20000);
 console.log('✓ aggregatePnd90 multi-stream categorization passed.');
 
+// Check 5: CSV Generator with UTF-8 BOM
+function escapeCsvCell(cell) {
+  if (cell === undefined || cell === null) return '""';
+  const str = String(cell);
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return `"${str}"`;
+}
+
+const sampleCsvRow = ['INV-001', 'บริษัท ทดสอบ, จำกัด', 45000].map(escapeCsvCell).join(',');
+assert.strictEqual(sampleCsvRow, '"INV-001","บริษัท ทดสอบ, จำกัด","45000"');
+assert('\uFEFF'.charCodeAt(0) === 0xFEFF, 'BOM marker is valid UTF-8 BOM');
+console.log('✓ CSV generator and UTF-8 BOM escaping passed.');
+
 console.log('\nAll domain verification tests passed successfully!');

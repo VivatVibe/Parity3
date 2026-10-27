@@ -1,7 +1,8 @@
 import React from 'react';
 import { Invoice } from '../domain/storage';
 import { aggregatePnd90, TaxCategory } from '../domain/tax';
-import { Calculator, AlertTriangle, CheckCircle, ShieldCheck, FileCheck, ArrowUpRight } from 'lucide-react';
+import { downloadPnd90Csv } from '../utils/exportCsv';
+import { Calculator, AlertTriangle, CheckCircle, ShieldCheck, FileCheck, ArrowUpRight, Download } from 'lucide-react';
 
 interface Props {
   invoices: Invoice[];
@@ -16,9 +17,11 @@ export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
       <div className="bg-linear-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-200 border border-blue-400/30">
-              <Calculator className="w-3.5 h-3.5" /> สรุปข้อมูลภาษีเงินได้บุคคลธรรมดา (ภ.ง.ด. 90)
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-200 border border-blue-400/30">
+                <Calculator className="w-3.5 h-3.5" /> สรุปข้อมูลภาษีเงินได้บุคคลธรรมดา (ภ.ง.ด. 90)
+              </span>
+            </div>
             <h2 className="text-2xl sm:text-3xl font-bold font-heading">
               สรุปรายรับสะสมและเครดิตภาษีหัก ณ ที่จ่าย
             </h2>
@@ -27,14 +30,23 @@ export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
             </p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15 min-w-56">
-            <div className="text-xs text-blue-200">ภาษีหัก ณ ที่จ่ายสะสม (Tax Credit)</div>
-            <div className="text-2xl sm:text-3xl font-bold text-amber-300 mt-1">
-              ฿{summary.totalWhtCredit.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+          <div className="flex flex-col sm:flex-row md:flex-col gap-3">
+            <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/15 min-w-56">
+              <div className="text-xs text-blue-200">ภาษีหัก ณ ที่จ่ายสะสม (Tax Credit)</div>
+              <div className="text-2xl sm:text-3xl font-bold text-amber-300 mt-1">
+                ฿{summary.totalWhtCredit.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+              </div>
+              <div className="text-[11px] text-blue-100/80 mt-1 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> นำไปหักลบภาษีหรือขอคืนเงินได้
+              </div>
             </div>
-            <div className="text-[11px] text-blue-100/80 mt-1 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> นำไปหักลบภาษีหรือขอคืนเงินได้
-            </div>
+
+            <button
+              onClick={() => downloadPnd90Csv(invoices)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+            >
+              <Download className="w-4 h-4" /> ส่งออกข้อมูลเป็น Excel / CSV
+            </button>
           </div>
         </div>
       </div>
