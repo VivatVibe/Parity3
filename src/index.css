@@ -46,12 +46,22 @@
   #printable-invoice {
     width: 100% !important;
     max-width: 100% !important;
+    min-height: 268mm !important;
+    height: 268mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
     padding: 0 !important;
     margin: 0 !important;
     box-shadow: none !important;
     border: none !important;
     font-size: 10.5pt !important;
     line-height: 1.5 !important;
+  }
+
+  .invoice-body-bottom {
+    margin-top: auto !important;
+    padding-top: 15px !important;
   }
 
   #printable-invoice table {

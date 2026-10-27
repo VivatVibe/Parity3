@@ -131,127 +131,131 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
 
         {/* Printable Invoice Page */}
         <div id="printable-invoice" className="p-5 sm:p-7 text-slate-800 bg-white">
-          {/* Header */}
-          <div className="flex justify-between items-start pb-3.5 border-b-2 border-slate-900">
-            <div>
-              <h1 className="text-xl font-bold font-heading text-slate-950">ใบแจ้งหนี้ / ใบวางบิล</h1>
-              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">INVOICE / BILLING NOTE</div>
-              <div className="mt-1.5 text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-200 inline-block px-2 py-0.5 rounded-md font-semibold">
-                {categoryMeta?.nameThai}
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-base font-bold text-slate-900 font-mono-numbers">{invoice.invoiceNumber}</div>
-              <div className="text-[11px] text-slate-600 mt-0.5">วันที่ (Date): {invoice.issueDate}</div>
-              <div className="text-[11px] text-slate-600 font-semibold">ครบกำหนด (Due Date): {invoice.dueDate}</div>
-            </div>
-          </div>
-
-          {/* Issuer & Client Info */}
-          <div className="grid grid-cols-2 gap-6 py-3.5 border-b border-slate-200 text-[11px] leading-snug">
-            <div>
-              <div className="font-bold text-slate-900 text-xs mb-0.5 font-heading">ผู้ออกเอกสาร (ผู้รับเงิน):</div>
-              <div className="font-semibold text-slate-800">{issuer.name}</div>
-              <div className="text-slate-600">{issuer.address}</div>
-              <div className="text-slate-600">เลขประจำตัวผู้เสียภาษี: {issuer.taxId}</div>
-              <div className="text-slate-600">โทรศัพท์: {issuer.phone}</div>
-            </div>
-            <div>
-              <div className="font-bold text-slate-900 text-xs mb-0.5 font-heading">ผู้รับเอกสาร (ลูกค้า/ผู้ว่าจ้าง):</div>
-              <div className="font-semibold text-slate-800">{invoice.clientName}</div>
-              <div className="text-slate-600">{invoice.clientAddress || '-'}</div>
-              <div className="text-slate-600">เลขประจำตัวผู้เสียภาษี: {invoice.clientTaxId || '-'}</div>
-            </div>
-          </div>
-
-          {/* Line Items Table */}
-          <div className="py-3">
-            <table className="w-full text-left text-[11px] border-collapse">
-              <thead>
-                <tr className="border-y border-slate-900 bg-slate-50 text-slate-900 font-bold">
-                  <th className="py-1.5 px-2.5 w-10 text-center">ลำดับ</th>
-                  <th className="py-1.5 px-2.5">รายละเอียด (Description)</th>
-                  <th className="py-1.5 px-2.5 w-16 text-center">จำนวน</th>
-                  <th className="py-1.5 px-2.5 w-24 text-right">ราคาต่อหน่วย</th>
-                  <th className="py-1.5 px-2.5 w-24 text-right">จำนวนเงิน (บาท)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {invoice.items.map((it, idx) => (
-                  <tr key={it.id}>
-                    <td className="py-2 px-2.5 text-center text-slate-400">{idx + 1}</td>
-                    <td className="py-2 px-2.5 font-medium text-slate-900">{it.description}</td>
-                    <td className="py-2 px-2.5 text-center font-mono-numbers">{it.quantity}</td>
-                    <td className="py-2 px-2.5 text-right font-mono-numbers">฿{it.unitPrice.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                    <td className="py-2 px-2.5 text-right font-bold font-mono-numbers">฿{it.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Financial Summary */}
-          <div className="border-t border-slate-900 pt-3 grid grid-cols-2 gap-3 text-[11px]">
-            <div className="flex flex-col justify-between">
-              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                <div className="text-slate-500 text-[10px]">จำนวนเงินตัวอักษร:</div>
-                <div className="font-bold text-slate-900 text-xs mt-0.5">
-                  ({thaiBahtText(invoice.netTotal)})
+          <div className="invoice-body-top">
+            {/* Header */}
+            <div className="flex justify-between items-start pb-3.5 border-b-2 border-slate-900">
+              <div>
+                <h1 className="text-xl font-bold font-heading text-slate-950">ใบแจ้งหนี้ / ใบวางบิล</h1>
+                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">INVOICE / BILLING NOTE</div>
+                <div className="mt-1.5 text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-200 inline-block px-2 py-0.5 rounded-md font-semibold">
+                  {categoryMeta?.nameThai}
                 </div>
               </div>
+              <div className="text-right">
+                <div className="text-base font-bold text-slate-900 font-mono-numbers">{invoice.invoiceNumber}</div>
+                <div className="text-[11px] text-slate-600 mt-0.5">วันที่ (Date): {invoice.issueDate}</div>
+                <div className="text-[11px] text-slate-600 font-semibold">ครบกำหนด (Due Date): {invoice.dueDate}</div>
+              </div>
+            </div>
 
-              {invoice.notes && (
-                <div className="text-slate-500 text-[10px] mt-1.5">
-                  <span className="font-semibold text-slate-700">หมายเหตุ:</span> {invoice.notes}
+            {/* Issuer & Client Info */}
+            <div className="grid grid-cols-2 gap-6 py-3.5 border-b border-slate-200 text-[11px] leading-snug">
+              <div>
+                <div className="font-bold text-slate-900 text-xs mb-0.5 font-heading">ผู้ออกเอกสาร (ผู้รับเงิน):</div>
+                <div className="font-semibold text-slate-800">{issuer.name}</div>
+                <div className="text-slate-600">{issuer.address}</div>
+                <div className="text-slate-600">เลขประจำตัวผู้เสียภาษี: {issuer.taxId}</div>
+                <div className="text-slate-600">โทรศัพท์: {issuer.phone}</div>
+              </div>
+              <div>
+                <div className="font-bold text-slate-900 text-xs mb-0.5 font-heading">ผู้รับเอกสาร (ลูกค้า/ผู้ว่าจ้าง):</div>
+                <div className="font-semibold text-slate-800">{invoice.clientName}</div>
+                <div className="text-slate-600">{invoice.clientAddress || '-'}</div>
+                <div className="text-slate-600">เลขประจำตัวผู้เสียภาษี: {invoice.clientTaxId || '-'}</div>
+              </div>
+            </div>
+
+            {/* Line Items Table */}
+            <div className="py-3">
+              <table className="w-full text-left text-[11px] border-collapse">
+                <thead>
+                  <tr className="border-y border-slate-900 bg-slate-50 text-slate-900 font-bold">
+                    <th className="py-1.5 px-2.5 w-10 text-center">ลำดับ</th>
+                    <th className="py-1.5 px-2.5">รายละเอียด (Description)</th>
+                    <th className="py-1.5 px-2.5 w-16 text-center">จำนวน</th>
+                    <th className="py-1.5 px-2.5 w-24 text-right">ราคาต่อหน่วย</th>
+                    <th className="py-1.5 px-2.5 w-24 text-right">จำนวนเงิน (บาท)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {invoice.items.map((it, idx) => (
+                    <tr key={it.id}>
+                      <td className="py-2 px-2.5 text-center text-slate-400">{idx + 1}</td>
+                      <td className="py-2 px-2.5 font-medium text-slate-900">{it.description}</td>
+                      <td className="py-2 px-2.5 text-center font-mono-numbers">{it.quantity}</td>
+                      <td className="py-2 px-2.5 text-right font-mono-numbers">฿{it.unitPrice.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-2 px-2.5 text-right font-bold font-mono-numbers">฿{it.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Financial Summary */}
+            <div className="border-t border-slate-900 pt-3 grid grid-cols-2 gap-3 text-[11px]">
+              <div className="flex flex-col justify-between">
+                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                  <div className="text-slate-500 text-[10px]">จำนวนเงินตัวอักษร:</div>
+                  <div className="font-bold text-slate-900 text-xs mt-0.5">
+                    ({thaiBahtText(invoice.netTotal)})
+                  </div>
+                </div>
+
+                {invoice.notes && (
+                  <div className="text-slate-500 text-[10px] mt-1.5">
+                    <span className="font-semibold text-slate-700">หมายเหตุ:</span> {invoice.notes}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1 text-right">
+                <div className="flex justify-between py-0.5 text-slate-600">
+                  <span>รวมเป็นเงิน (Subtotal):</span>
+                  <span className="font-semibold text-slate-900 font-mono-numbers">฿{invoice.subtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between py-0.5 text-amber-800">
+                  <span>หักภาษี ณ ที่จ่าย 3% (WHT 3%):</span>
+                  <span className="font-semibold font-mono-numbers">-฿{invoice.whtAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="border-t border-slate-400 my-1"></div>
+                <div className="flex justify-between py-0.5 text-xs font-bold text-slate-950">
+                  <span>ยอดชำระสุทธิ (Net Payable):</span>
+                  <span className="text-sm text-indigo-700 font-mono-numbers">฿{invoice.netTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="invoice-body-bottom">
+            {/* Payment & PromptPay Section */}
+            <div className="mt-3.5 p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px]">
+              <div className="space-y-0.5 flex-1">
+                <div className="font-bold text-slate-900 text-xs font-heading">ช่องทางการชำระเงิน (Payment Methods)</div>
+                <div className="text-slate-700 font-medium">โอนเงินเข้าบัญชีธนาคาร:</div>
+                <div className="text-slate-900 font-bold">{issuer.bankName} เลขที่บัญชี: <span className="font-mono-numbers">{issuer.bankAccount}</span></div>
+                <div className="text-slate-600">ชื่อบัญชี: {issuer.bankAccountName}</div>
+                <div className="text-slate-700 mt-1">พร้อมเพย์ (PromptPay): <span className="font-mono-numbers font-bold text-indigo-700">{issuer.promptPayId}</span></div>
+                <div className="text-[10px] text-slate-500 italic mt-0.5">* กรุณาจัดส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย (ใบ 50 ทวิ 3%) มายังที่อยู่ผู้รับเงิน</div>
+              </div>
+
+              {qrUrl && (
+                <div className="flex flex-col items-center bg-white p-2 rounded-lg border border-slate-200 shadow-2xs shrink-0">
+                  <img src={qrUrl} alt="PromptPay QR Code" className="w-24 h-24 object-contain" />
+                  <div className="text-[9px] font-bold text-slate-700 mt-0.5 tracking-wider uppercase">Thai QR Payment</div>
+                  <div className="text-[10px] font-bold text-indigo-700 font-mono-numbers">฿{invoice.netTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</div>
                 </div>
               )}
             </div>
 
-            <div className="space-y-1 text-right">
-              <div className="flex justify-between py-0.5 text-slate-600">
-                <span>รวมเป็นเงิน (Subtotal):</span>
-                <span className="font-semibold text-slate-900 font-mono-numbers">฿{invoice.subtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="flex justify-between py-0.5 text-amber-800">
-                <span>หักภาษี ณ ที่จ่าย 3% (WHT 3%):</span>
-                <span className="font-semibold font-mono-numbers">-฿{invoice.whtAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="border-t border-slate-400 my-1"></div>
-              <div className="flex justify-between py-0.5 text-xs font-bold text-slate-950">
-                <span>ยอดชำระสุทธิ (Net Payable):</span>
-                <span className="text-sm text-indigo-700 font-mono-numbers">฿{invoice.netTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</span>
-              </div>
+            {/* Signature Line */}
+            <div className="mt-4 pt-3 border-t border-slate-200/60 grid grid-cols-2 gap-6 text-center text-xs avoid-break items-end">
+              <SignatureBlock isRecipient={true} issuer={issuer} />
+              <SignatureBlock
+                issuer={issuer}
+                issueDate={invoice.issueDate}
+                roleTitle="ผู้วางบิล / ผู้รับเงิน"
+              />
             </div>
-          </div>
-
-          {/* Payment & PromptPay Section */}
-          <div className="mt-3.5 p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px]">
-            <div className="space-y-0.5 flex-1">
-              <div className="font-bold text-slate-900 text-xs font-heading">ช่องทางการชำระเงิน (Payment Methods)</div>
-              <div className="text-slate-700 font-medium">โอนเงินเข้าบัญชีธนาคาร:</div>
-              <div className="text-slate-900 font-bold">{issuer.bankName} เลขที่บัญชี: <span className="font-mono-numbers">{issuer.bankAccount}</span></div>
-              <div className="text-slate-600">ชื่อบัญชี: {issuer.bankAccountName}</div>
-              <div className="text-slate-700 mt-1">พร้อมเพย์ (PromptPay): <span className="font-mono-numbers font-bold text-indigo-700">{issuer.promptPayId}</span></div>
-              <div className="text-[10px] text-slate-500 italic mt-0.5">* กรุณาจัดส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย (ใบ 50 ทวิ 3%) มายังที่อยู่ผู้รับเงิน</div>
-            </div>
-
-            {qrUrl && (
-              <div className="flex flex-col items-center bg-white p-2 rounded-lg border border-slate-200 shadow-2xs shrink-0">
-                <img src={qrUrl} alt="PromptPay QR Code" className="w-24 h-24 object-contain" />
-                <div className="text-[9px] font-bold text-slate-700 mt-0.5 tracking-wider uppercase">Thai QR Payment</div>
-                <div className="text-[10px] font-bold text-indigo-700 font-mono-numbers">฿{invoice.netTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</div>
-              </div>
-            )}
-          </div>
-
-          {/* Signature Line */}
-          <div className="mt-4 pt-3 border-t border-slate-200/60 grid grid-cols-2 gap-6 text-center text-xs avoid-break items-end">
-            <SignatureBlock isRecipient={true} issuer={issuer} />
-            <SignatureBlock
-              issuer={issuer}
-              issueDate={invoice.issueDate}
-              roleTitle="ผู้วางบิล / ผู้รับเงิน"
-            />
           </div>
         </div>
 
