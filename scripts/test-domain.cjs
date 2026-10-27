@@ -308,4 +308,35 @@ assert.strictEqual(decoded.inv.invoiceNumber, 'INV-2026-001');
 assert.strictEqual(decoded.iss.bankAccount, '123-4-56789-0');
 console.log('✓ LINE Message & URL Share Encoding/Decoding passed.');
 
+// Check 8: Known Clients Memory & Deduplication
+function getKnownClients(invoices) {
+  const map = new Map();
+  for (const inv of invoices) {
+    const trimmed = (inv.clientName || '').trim();
+    if (!trimmed) continue;
+    if (!map.has(trimmed) || inv.issueDate > map.get(trimmed).lastUsedDate) {
+      map.set(trimmed, {
+        clientName: trimmed,
+        clientTaxId: inv.clientTaxId || '',
+        clientAddress: inv.clientAddress || '',
+        lastUsedDate: inv.issueDate || ''
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.lastUsedDate.localeCompare(a.lastUsedDate));
+}
+
+const pastInvoices = [
+  { clientName: 'บริษัท กสทช', clientTaxId: '01001', issueDate: '2026-01-10' },
+  { clientName: 'บริษัท ทีโอที', clientTaxId: '02002', issueDate: '2026-02-15' },
+  { clientName: 'บริษัท กสทช', clientTaxId: '01001-NEW', issueDate: '2026-03-20' },
+  { clientName: '', clientTaxId: '99999', issueDate: '2026-03-01' }
+];
+
+const clients = getKnownClients(pastInvoices);
+assert.strictEqual(clients.length, 2, 'Must deduplicate clients by name');
+assert.strictEqual(clients[0].clientName, 'บริษัท กสทช', 'Most recent client must be first');
+assert.strictEqual(clients[0].clientTaxId, '01001-NEW', 'Must pick details from newest invoice');
+console.log('✓ Known Clients Memory & Deduplication passed.');
+
 console.log('\nAll domain verification tests passed successfully!');

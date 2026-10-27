@@ -54,11 +54,13 @@ async function runAudit() {
     console.log(`[Mobile] Invoice Creation Form opened: ${isModalOpen ? 'PASS' : 'FAIL'}`);
 
     // Fill form
-    await page.type('input[placeholder="เช่น บริษัท ดิจิทัล เอเจนซี่ จำกัด"]', 'ลูกค้าทดสอบ บนมือถือ จำกัด');
+    await page.type('input[placeholder="พิมพ์ชื่อบริษัท หรือ ชื่อลูกค้า..."]', 'ลูกค้าทดสอบ บนมือถือ จำกัด');
     
     // Submit
-    const submitBtn = await page.$('button[type="submit"]');
-    await submitBtn.click();
+    await page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('บันทึกใบวางบิล'));
+      if (btn) btn.click();
+    });
     await new Promise(r => setTimeout(r, 600));
   }
 

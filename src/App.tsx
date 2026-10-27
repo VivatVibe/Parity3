@@ -215,6 +215,7 @@ export default function App() {
       {/* Invoice Creation Form Modal */}
       {showCreateModal && (
         <InvoiceForm
+          invoices={invoices}
           onSave={handleSaveInvoice}
           onCancel={() => setShowCreateModal(false)}
         />

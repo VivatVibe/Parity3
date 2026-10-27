@@ -43,6 +43,56 @@ export interface IssuerProfile {
 
 const STORAGE_INVOICES_KEY = 'thai_freelancer_invoices';
 const STORAGE_ISSUER_KEY = 'thai_freelancer_issuer';
+const STORAGE_DRAFT_KEY = 'thai_freelancer_invoice_draft';
+
+export interface KnownClient {
+  clientName: string;
+  clientTaxId: string;
+  clientAddress: string;
+  lastUsedDate: string;
+}
+
+export function getKnownClients(invoices: Invoice[]): KnownClient[] {
+  const map = new Map<string, KnownClient>();
+  for (const inv of invoices) {
+    const trimmed = inv.clientName.trim();
+    if (!trimmed) continue;
+    if (!map.has(trimmed) || inv.issueDate > map.get(trimmed)!.lastUsedDate) {
+      map.set(trimmed, {
+        clientName: trimmed,
+        clientTaxId: inv.clientTaxId || '',
+        clientAddress: inv.clientAddress || '',
+        lastUsedDate: inv.issueDate
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.lastUsedDate.localeCompare(a.lastUsedDate));
+}
+
+export function loadDraftInvoice(): Partial<Invoice> | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveDraftInvoice(draft: Partial<Invoice>): void {
+  try {
+    localStorage.setItem(STORAGE_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+export function clearDraftInvoice(): void {
+  try {
+    localStorage.removeItem(STORAGE_DRAFT_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 export const DEFAULT_ISSUER: IssuerProfile = {
   name: 'วรวิทย์ เทคไพโอเนียร์ (Vivat TechPioneer)',
