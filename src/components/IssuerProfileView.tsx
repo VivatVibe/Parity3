@@ -2,22 +2,72 @@ import React, { useState, useRef } from 'react';
 import { Invoice, IssuerProfile, saveIssuer, saveInvoices, SEED_INVOICES, DEFAULT_ISSUER } from '../domain/storage';
 import { downloadBackupFile, parseBackupFile, BackupPayload } from '../utils/backupRestore';
 import { SignaturePad } from './SignaturePad';
-import { Check, QrCode, Download, Upload, RefreshCw, AlertTriangle, Database, PenTool, Sparkles } from 'lucide-react';
+import { Check, QrCode, Download, Upload, RefreshCw, AlertTriangle, Database, PenTool, Sparkles, Image, Lock, Trash2 } from 'lucide-react';
 
 interface Props {
   issuer: IssuerProfile;
   invoices: Invoice[];
   onUpdate: (updated: IssuerProfile) => void;
   onRestoreData: (issuer: IssuerProfile, invoices: Invoice[]) => void;
+  isPro?: boolean;
+  onOpenUpgradeModal?: () => void;
 }
 
-export const IssuerProfileView: React.FC<Props> = ({ issuer, invoices, onUpdate, onRestoreData }) => {
+export const IssuerProfileView: React.FC<Props> = ({
+  issuer,
+  invoices,
+  onUpdate,
+  onRestoreData,
+  isPro = false,
+  onOpenUpgradeModal
+}) => {
   const [profile, setProfile] = useState<IssuerProfile>(issuer);
   const [saved, setSaved] = useState(false);
   const [restoreCandidate, setRestoreCandidate] = useState<BackupPayload | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [restoreSuccess, setRestoreSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 200;
+        let w = img.width;
+        let h = img.height;
+        if (w > h) {
+          if (w > maxDim) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          }
+        } else {
+          if (h > maxDim) {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, w, h);
+        const compressedDataUrl = canvas.toDataURL('image/png', 0.85);
+        setProfile(prev => ({ ...prev, logoUrl: compressedDataUrl }));
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    if (logoInputRef.current) logoInputRef.current.value = '';
+  };
+
+  const handleRemoveLogo = () => {
+    setProfile(prev => ({ ...prev, logoUrl: '' }));
+  };
 
   const handleChange = (field: keyof IssuerProfile, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
@@ -97,6 +147,83 @@ export const IssuerProfileView: React.FC<Props> = ({ issuer, invoices, onUpdate,
         </div>
 
         <form onSubmit={handleSave} className="mt-6 space-y-5">
+          {/* Logo Upload Section (Pro Feature) */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                <Image className="w-4 h-4 text-indigo-600" />
+                โลโก้ร้านค้า / แบรนด์บนหัวใบวางบิล
+                {!isPro && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                    <Lock className="w-2.5 h-2.5" />
+                    PRO
+                  </span>
+                )}
+              </label>
+              {!isPro && onOpenUpgradeModal && (
+                <button
+                  type="button"
+                  onClick={onOpenUpgradeModal}
+                  className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold underline"
+                >
+                  อัปเกรดเพื่อใส่โลโก้
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4">
+              {profile.logoUrl ? (
+                <div className="relative group">
+                  <img
+                    src={profile.logoUrl}
+                    alt="Logo preview"
+                    className="w-14 h-14 object-contain rounded-lg border border-slate-300 bg-white p-1"
+                  />
+                  {isPro && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      className="absolute -top-1.5 -right-1.5 p-1 bg-rose-500 text-white rounded-full shadow hover:bg-rose-600 transition"
+                      title="ลบโลโก้"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="w-14 h-14 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 bg-white">
+                  <Image className="w-6 h-6" />
+                </div>
+              )}
+
+              <div className="flex-1">
+                {isPro ? (
+                  <div>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 shadow-xs"
+                    >
+                      {profile.logoUrl ? 'เปลี่ยนโลโก้' : 'เลือกรูปภาพโลโก้ (PNG, JPG)'}
+                    </button>
+                    <p className="text-[10px] text-slate-500 mt-1">ขนาดแนะนำไม่เกิน 200x200px ระบบจะย่อขนาดให้อัตโนมัติ</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    ฟังก์ชันอัปโหลดโลโก้ร้านค้าสงวนสิทธิ์สำหรับสมาชิก Pro เพื่อเพิ่มความเป็นมืออาชีพบนหัวเอกสาร A4
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">ชื่อ-นามสกุล / ชื่อร้านค้า *</label>
             <input

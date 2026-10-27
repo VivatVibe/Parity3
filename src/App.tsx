@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Invoice, IssuerProfile, loadInvoices, saveInvoices, loadIssuer } from './domain/storage';
+import { Invoice, IssuerProfile, loadInvoices, saveInvoices, loadIssuer, saveIssuer } from './domain/storage';
+import {
+  SubscriptionState,
+  UserAccount,
+  loadSubscription,
+  saveSubscription,
+  loadUser,
+  saveUser,
+  checkInvoiceLimit
+} from './domain/subscription';
+import { uploadToCloud, downloadFromCloud } from './domain/cloudSync';
 import { InvoiceList } from './components/InvoiceList';
 import { InvoiceForm } from './components/InvoiceForm';
 import { InvoicePreviewModal } from './components/InvoicePreviewModal';
@@ -7,17 +17,27 @@ import { Pnd90Dashboard } from './components/Pnd90Dashboard';
 import { IssuerProfileView } from './components/IssuerProfileView';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { ClientInvoiceView } from './components/ClientInvoiceView';
+import { LandingPage } from './components/LandingPage';
+import { GoogleLoginButton } from './components/GoogleLoginButton';
+import { ProUpgradeModal } from './components/ProUpgradeModal';
 import { decodeInvoiceFromShareParam } from './utils/shareInvoice';
-import { FileText, PieChart, User, PlusCircle, Sparkles } from 'lucide-react';
+import { FileText, PieChart, User, PlusCircle, Sparkles, Home, Zap } from 'lucide-react';
 
 export default function App() {
+  const [viewMode, setViewMode] = useState<'app' | 'landing'>('app');
   const [activeTab, setActiveTab] = useState<'invoices' | 'tax' | 'profile'>('invoices');
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [issuer, setIssuer] = useState<IssuerProfile>(loadIssuer());
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
   const [sharedView, setSharedView] = useState<{ invoice: Invoice; issuer: IssuerProfile } | null>(null);
+
+  // User Account & Subscription States
+  const [user, setUser] = useState<UserAccount | null>(loadUser());
+  const [subscription, setSubscription] = useState<SubscriptionState>(loadSubscription());
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   useEffect(() => {
     // Check if opened via share link ?view=...
@@ -31,6 +51,11 @@ export default function App() {
       }
     }
 
+    // Check if landing page was explicitly requested
+    if (urlParams.get('page') === 'landing') {
+      setViewMode('landing');
+    }
+
     const loaded = loadInvoices();
     setInvoices(loaded);
     if (loaded.length > 0) {
@@ -38,13 +63,85 @@ export default function App() {
     }
   }, []);
 
+  const handleCloudSync = async () => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      const result = await uploadToCloud(user, invoices, issuer);
+      if (result.success) {
+        // Also pull any remote updates
+        const remote = await downloadFromCloud(user);
+        if (remote.success) {
+          if (remote.subscription) {
+            setSubscription(remote.subscription);
+          }
+          if (remote.invoices && remote.invoices.length > 0) {
+            setInvoices(remote.invoices);
+            saveInvoices(remote.invoices);
+          }
+        }
+      }
+    } catch {
+      // offline resilient
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleLoginSuccess = async (loggedInUser: UserAccount, sub?: SubscriptionState) => {
+    setUser(loggedInUser);
+    saveUser(loggedInUser);
+    if (sub) {
+      setSubscription(sub);
+      saveSubscription(sub);
+    }
+    // Pull user cloud data if exists
+    try {
+      setIsSyncing(true);
+      const remote = await downloadFromCloud(loggedInUser);
+      if (remote.success) {
+        if (remote.issuerProfile) {
+          setIssuer(remote.issuerProfile);
+          saveIssuer(remote.issuerProfile);
+        }
+        if (remote.invoices && remote.invoices.length > 0) {
+          setInvoices(remote.invoices);
+          saveInvoices(remote.invoices);
+          setSelectedInvoice(remote.invoices[0]);
+        }
+        if (remote.subscription) {
+          setSubscription(remote.subscription);
+          saveSubscription(remote.subscription);
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    saveUser(null);
+  };
+
+  const handleUpgradeSuccess = (newSub: SubscriptionState) => {
+    setSubscription(newSub);
+    saveSubscription(newSub);
+  };
+
   const handleSaveInvoice = (newInv: Invoice) => {
     const updated = [newInv, ...invoices];
     setInvoices(updated);
     saveInvoices(updated);
     setShowCreateModal(false);
     setSelectedInvoice(newInv);
-    setShowPrintModal(true); // Open modal preview on save
+    setShowPrintModal(true);
+
+    if (user) {
+      uploadToCloud(user, updated, issuer).catch(() => {});
+    }
   };
 
   const handleUpdateInvoice = (updatedInv: Invoice) => {
@@ -53,6 +150,10 @@ export default function App() {
     saveInvoices(updated);
     if (selectedInvoice && selectedInvoice.id === updatedInv.id) {
       setSelectedInvoice(updatedInv);
+    }
+
+    if (user) {
+      uploadToCloud(user, updated, issuer).catch(() => {});
     }
   };
 
@@ -65,6 +166,10 @@ export default function App() {
     });
     setInvoices(updated);
     saveInvoices(updated);
+
+    if (user) {
+      uploadToCloud(user, updated, issuer).catch(() => {});
+    }
   };
 
   const handleDeleteInvoice = (id: string) => {
@@ -75,10 +180,13 @@ export default function App() {
       if (selectedInvoice && selectedInvoice.id === id) {
         setSelectedInvoice(updated[0] || null);
       }
+
+      if (user) {
+        uploadToCloud(user, updated, issuer).catch(() => {});
+      }
     }
   };
 
-  // On mobile (< 1024px), selecting an invoice opens the modal preview
   const handleSelectInvoice = (inv: Invoice) => {
     setSelectedInvoice(inv);
     if (window.innerWidth < 1024) {
@@ -100,6 +208,28 @@ export default function App() {
     );
   }
 
+  // If viewing the Landing Page
+  if (viewMode === 'landing') {
+    return (
+      <>
+        <LandingPage
+          onEnterApp={() => setViewMode('app')}
+          onOpenUpgradeModal={() => setShowUpgradeModal(true)}
+        />
+        <ProUpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          user={user}
+          currentSubscription={subscription}
+          onUpgradeSuccess={handleUpgradeSuccess}
+        />
+      </>
+    );
+  }
+
+  const isPro = subscription.tier === 'pro';
+  const limitInfo = checkInvoiceLimit(invoices, subscription.tier);
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-['Sarabun',sans-serif]">
       {/* Top Header */}
@@ -114,9 +244,18 @@ export default function App() {
                 <h1 className="font-bold text-slate-950 text-base font-heading">
                   Multi-Income Billing
                 </h1>
-                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  <Sparkles className="w-3 h-3 text-indigo-500" /> Pro Edition
-                </span>
+                {isPro ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                    <Sparkles className="w-2.5 h-2.5 fill-amber-500 text-amber-500" /> PRO
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition"
+                  >
+                    <Zap className="w-2.5 h-2.5 fill-indigo-500 text-indigo-500" /> อัปเกรด Pro
+                  </button>
+                )}
               </div>
               <p className="text-[11px] text-slate-500">
                 ระบบออกบิลพร้อม PromptPay & สรุปภาษี ภ.ง.ด. 90 หัก ณ ที่จ่าย 3%
@@ -124,7 +263,8 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Navigation Tabs (Desktop) */}
             <nav className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
               <button
                 onClick={() => setActiveTab('invoices')}
@@ -163,18 +303,39 @@ export default function App() {
               </button>
             </nav>
 
+            {/* Switch to Landing Page */}
+            <button
+              onClick={() => setViewMode('landing')}
+              className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
+              title="ดูหน้าหลักแนะนำระบบ"
+            >
+              <Home className="w-3.5 h-3.5" />
+              <span>หน้าแนะนำ</span>
+            </button>
+
+            {/* Google Login / Account Info */}
+            <GoogleLoginButton
+              user={user}
+              subscription={subscription}
+              onLoginSuccess={handleLoginSuccess}
+              onLogout={handleLogout}
+              onSyncRequest={handleCloudSync}
+              isSyncing={isSyncing}
+            />
+
+            {/* New Invoice Button (Desktop) */}
             <button
               onClick={() => setShowCreateModal(true)}
-              className="hidden md:flex items-center gap-1.5 ml-2 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition shadow-xs cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition shadow-xs cursor-pointer"
             >
               <PlusCircle className="w-4 h-4 stroke-[2.5]" />
-              ออกบิลใหม่
+              <span>ออกบิลใหม่</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area (hidden during print when print preview modal is open) */}
+      {/* Main Content Area */}
       <main className={`flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 md:pb-8 ${showPrintModal ? 'no-print' : ''}`}>
         {activeTab === 'invoices' && (
           <InvoiceList
@@ -199,11 +360,18 @@ export default function App() {
           <IssuerProfileView
             issuer={issuer}
             invoices={invoices}
-            onUpdate={setIssuer}
+            isPro={isPro}
+            onOpenUpgradeModal={() => setShowUpgradeModal(true)}
+            onUpdate={(newIssuer) => {
+              setIssuer(newIssuer);
+              saveIssuer(newIssuer);
+              if (user) uploadToCloud(user, invoices, newIssuer).catch(() => {});
+            }}
             onRestoreData={(newIssuer, newInvoices) => {
               setIssuer(newIssuer);
               setInvoices(newInvoices);
               if (newInvoices.length > 0) setSelectedInvoice(newInvoices[0]);
+              if (user) uploadToCloud(user, newInvoices, newIssuer).catch(() => {});
             }}
           />
         )}
@@ -220,6 +388,11 @@ export default function App() {
       {showCreateModal && (
         <InvoiceForm
           invoices={invoices}
+          isPro={isPro}
+          onOpenUpgradeModal={() => {
+            setShowCreateModal(false);
+            setShowUpgradeModal(true);
+          }}
           onSave={handleSaveInvoice}
           onCancel={() => setShowCreateModal(false)}
         />
@@ -233,6 +406,15 @@ export default function App() {
           onClose={() => setShowPrintModal(false)}
         />
       )}
+
+      {/* Pro Tier Upgrade Modal */}
+      <ProUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        user={user}
+        currentSubscription={subscription}
+        onUpgradeSuccess={handleUpgradeSuccess}
+      />
     </div>
   );
 }

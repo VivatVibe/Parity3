@@ -41,6 +41,7 @@ export interface IssuerProfile {
   bankAccountName: string;
   signatureMode?: 'auto' | 'drawn' | 'none';
   signatureDataUrl?: string;
+  logoUrl?: string;
 }
 
 const STORAGE_INVOICES_KEY = 'thai_freelancer_invoices';

@@ -1,15 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Invoice, InvoiceItem, getKnownClients, KnownClient, loadDraftInvoice, saveDraftInvoice, clearDraftInvoice } from '../domain/storage';
 import { TaxCategory, TAX_CATEGORIES, calculateBilling, roundCurrency } from '../domain/tax';
-import { X, Plus, Trash2, Check, Sparkles, Building2, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react';
+import { getInvoicesThisMonth } from '../domain/subscription';
+import { X, Plus, Trash2, Check, Sparkles, Building2, ChevronDown, ChevronUp, RotateCcw, Lock } from 'lucide-react';
 
 interface Props {
   invoices: Invoice[];
   onSave: (invoice: Invoice) => void;
   onCancel: () => void;
+  isPro?: boolean;
+  onOpenUpgradeModal?: () => void;
 }
 
-export const InvoiceForm: React.FC<Props> = ({ invoices, onSave, onCancel }) => {
+export const InvoiceForm: React.FC<Props> = ({
+  invoices,
+  onSave,
+  onCancel,
+  isPro = false,
+  onOpenUpgradeModal
+}) => {
   const knownClients = getKnownClients(invoices);
   const draft = loadDraftInvoice();
 
@@ -126,10 +135,20 @@ export const InvoiceForm: React.FC<Props> = ({ invoices, onSave, onCancel }) => 
   const subtotal = roundCurrency(items.reduce((acc, it) => acc + (it.amount || 0), 0));
   const billing = calculateBilling(subtotal);
 
+  const monthInvoices = getInvoicesThisMonth(invoices);
+  const isMonthLimitReached = !isPro && monthInvoices.length >= 5;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientName.trim()) {
       alert('กรุณากรอกชื่อลูกค้า / บริษัท');
+      return;
+    }
+
+    if (isMonthLimitReached) {
+      if (confirm('คุณออกใบวางบิลครบโควตาฟรี 5 ฉบับประจำเดือนนี้แล้ว ต้องการอัปเกรดเป็น Pro เพื่อออกบิลไม่จำกัดและใช้งานทุกฟีเจอร์พรีเมียมหรือไม่?')) {
+        onOpenUpgradeModal?.();
+      }
       return;
     }
 
@@ -167,6 +186,19 @@ export const InvoiceForm: React.FC<Props> = ({ invoices, onSave, onCancel }) => 
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-slate-900 font-heading">ออกใบวางบิลใหม่</h2>
+              {isPro ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                  <Sparkles className="w-2.5 h-2.5 fill-amber-500 text-amber-500" /> PRO โควตาไม่จำกัด
+                </span>
+              ) : (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                  isMonthLimitReached
+                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                }`}>
+                  โควตาฟรี: {monthInvoices.length}/5 ฉบับ
+                </span>
+              )}
               {draftRestored && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                   <Check className="w-3 h-3 text-emerald-600" /> กู้คืนแบบร่างแล้ว

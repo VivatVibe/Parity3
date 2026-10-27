@@ -1,0 +1,8 @@
+name = "thai-freelancer-billing"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-03-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "freelancer-billing-db"
+database_id = "09d7598b-d066-44ec-b2f5-97e3619177d9"

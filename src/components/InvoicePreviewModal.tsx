@@ -134,11 +134,20 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
           <div className="invoice-body-top">
             {/* Header */}
             <div className="flex justify-between items-start pb-3.5 border-b-2 border-slate-900">
-              <div>
-                <h1 className="text-xl font-bold font-heading text-slate-950">ใบแจ้งหนี้ / ใบวางบิล</h1>
-                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">INVOICE / BILLING NOTE</div>
-                <div className="mt-1.5 text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-200 inline-block px-2 py-0.5 rounded-md font-semibold">
-                  {categoryMeta?.nameThai}
+              <div className="flex items-center gap-3">
+                {issuer.logoUrl && (
+                  <img
+                    src={issuer.logoUrl}
+                    alt="Logo"
+                    className="w-12 h-12 object-contain rounded-lg border border-slate-200 bg-white"
+                  />
+                )}
+                <div>
+                  <h1 className="text-xl font-bold font-heading text-slate-950">ใบแจ้งหนี้ / ใบวางบิล</h1>
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">INVOICE / BILLING NOTE</div>
+                  <div className="mt-1.5 text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-200 inline-block px-2 py-0.5 rounded-md font-semibold">
+                    {categoryMeta?.nameThai}
+                  </div>
                 </div>
               </div>
               <div className="text-right">
