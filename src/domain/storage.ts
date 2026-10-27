@@ -39,6 +39,8 @@ export interface IssuerProfile {
   bankName: string;
   bankAccount: string;
   bankAccountName: string;
+  signatureMode?: 'auto' | 'drawn' | 'none';
+  signatureDataUrl?: string;
 }
 
 const STORAGE_INVOICES_KEY = 'thai_freelancer_invoices';
@@ -102,7 +104,9 @@ export const DEFAULT_ISSUER: IssuerProfile = {
   promptPayId: '0812345678',
   bankName: 'ธนาคารกสิกรไทย (KBANK)',
   bankAccount: '045-2-98765-4',
-  bankAccountName: 'นาย วรวิทย์ เทคไพโอเนียร์'
+  bankAccountName: 'นาย วรวิทย์ เทคไพโอเนียร์',
+  signatureMode: 'auto',
+  signatureDataUrl: ''
 };
 
 export const SEED_INVOICES: Invoice[] = [
@@ -185,7 +189,12 @@ export function loadIssuer(): IssuerProfile {
       saveIssuer(DEFAULT_ISSUER);
       return DEFAULT_ISSUER;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return {
+      ...DEFAULT_ISSUER,
+      ...parsed,
+      signatureMode: parsed.signatureMode || 'auto'
+    };
   } catch {
     return DEFAULT_ISSUER;
   }

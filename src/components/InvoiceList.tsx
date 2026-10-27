@@ -6,6 +6,7 @@ import { AttachmentModal } from './AttachmentModal';
 import { generatePromptPayQrDataUrl } from '../domain/promptpay';
 import { thaiBahtText } from '../utils/thaiBaht';
 import { formatLineInvoiceMessage, encodeInvoiceToShareUrl } from '../utils/shareInvoice';
+import { SignatureBlock } from './SignatureBlock';
 import {
   Plus,
   CheckCircle2,
@@ -30,6 +31,7 @@ interface Props {
   issuer: IssuerProfile;
   selectedInvoice: Invoice | null;
   onSelectInvoice: (invoice: Invoice) => void;
+  onOpenPrint?: (invoice: Invoice) => void;
   onUpdateInvoice: (invoice: Invoice) => void;
   onToggle50Tawi: (invoiceId: string) => void;
   onDeleteInvoice: (invoiceId: string) => void;
@@ -41,6 +43,7 @@ export const InvoiceList: React.FC<Props> = ({
   issuer,
   selectedInvoice,
   onSelectInvoice,
+  onOpenPrint,
   onUpdateInvoice,
   onToggle50Tawi,
   onDeleteInvoice,
@@ -377,6 +380,16 @@ export const InvoiceList: React.FC<Props> = ({
                 )}
               </div>
 
+              {/* Signature Block in Split View */}
+              <div className="mt-5 pt-4 border-t border-slate-100 grid grid-cols-2 gap-4 text-center">
+                <SignatureBlock isRecipient={true} issuer={issuer} />
+                <SignatureBlock
+                  issuer={issuer}
+                  issueDate={currentPreview.issueDate}
+                  roleTitle="ผู้วางบิล / ผู้รับเงิน"
+                />
+              </div>
+
               {/* Bottom Quick Actions */}
               <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -411,10 +424,16 @@ export const InvoiceList: React.FC<Props> = ({
                 </div>
 
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => {
+                    if (onOpenPrint) {
+                      onOpenPrint(currentPreview);
+                    } else {
+                      window.print();
+                    }
+                  }}
                   className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold transition cursor-pointer shadow-xs"
                 >
-                  <Printer className="w-3.5 h-3.5" /> สั่งพิมพ์ / PDF
+                  <Printer className="w-3.5 h-3.5" /> พิมพ์ / บันทึก PDF
                 </button>
               </div>
 

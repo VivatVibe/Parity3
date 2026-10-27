@@ -34,9 +34,17 @@ ${itemsText}
  * Encodes an invoice into a URL-safe Base64 payload so it can be viewed by anyone without a server.
  */
 export function encodeInvoiceToShareUrl(invoice: Invoice, issuer: IssuerProfile, baseUrl = window.location.origin): string {
+  // Strip large attachments and lengthy drawn signature images from URL param to keep query string within safe HTTP length
+  const { slipImage, tawiImage, ...cleanInvoice } = invoice;
+  const cleanIssuer = {
+    ...issuer,
+    signatureDataUrl: (issuer.signatureDataUrl && issuer.signatureDataUrl.length < 2000) ? issuer.signatureDataUrl : undefined,
+    signatureMode: (issuer.signatureDataUrl && issuer.signatureDataUrl.length >= 2000 && issuer.signatureMode === 'drawn') ? 'auto' : (issuer.signatureMode || 'auto')
+  };
+
   const minimalPayload = {
-    inv: invoice,
-    iss: issuer
+    inv: cleanInvoice,
+    iss: cleanIssuer
   };
   const jsonStr = JSON.stringify(minimalPayload);
   // Base64 encode supporting UTF-8 Thai characters

@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Invoice, IssuerProfile, saveIssuer, saveInvoices, SEED_INVOICES, DEFAULT_ISSUER } from '../domain/storage';
 import { downloadBackupFile, parseBackupFile, BackupPayload } from '../utils/backupRestore';
-import { Check, QrCode, Download, Upload, RefreshCw, AlertTriangle, Database } from 'lucide-react';
+import { SignaturePad } from './SignaturePad';
+import { Check, QrCode, Download, Upload, RefreshCw, AlertTriangle, Database, PenTool, Sparkles } from 'lucide-react';
 
 interface Props {
   issuer: IssuerProfile;
@@ -192,6 +193,106 @@ export const IssuerProfileView: React.FC<Props> = ({ issuer, invoices, onUpdate,
                 className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
+          </div>
+
+          {/* Signature Configuration Section */}
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider font-heading flex items-center gap-1.5">
+                  <PenTool className="w-3.5 h-3.5 text-indigo-600" />
+                  ลายเซ็นผู้วางบิล / ผู้รับเงิน (Electronic Signature)
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  เลือกลักษณะลายเซ็นที่จะประทับบนใบแจ้งหนี้อัตโนมัติ
+                </p>
+              </div>
+            </div>
+
+            {/* Mode Selector Tabs */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setProfile(prev => ({ ...prev, signatureMode: 'auto' }))}
+                className={`flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                  (profile.signatureMode || 'auto') === 'auto'
+                    ? 'bg-indigo-50 border-indigo-500 text-indigo-900 shadow-2xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                <span>ลายเซ็นอัตโนมัติ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProfile(prev => ({ ...prev, signatureMode: 'drawn' }))}
+                className={`flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                  profile.signatureMode === 'drawn'
+                    ? 'bg-indigo-50 border-indigo-500 text-indigo-900 shadow-2xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <PenTool className="w-3.5 h-3.5 text-indigo-600" />
+                <span>วาดลายมือชื่อ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProfile(prev => ({ ...prev, signatureMode: 'none' }))}
+                className={`flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+                  profile.signatureMode === 'none'
+                    ? 'bg-indigo-50 border-indigo-500 text-indigo-900 shadow-2xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <span>ไม่ใส่ลายเซ็น (เซ็นสด)</span>
+              </button>
+            </div>
+
+            {/* Mode Details & Preview */}
+            {(profile.signatureMode || 'auto') === 'auto' && (
+              <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-2">
+                <span className="text-[11px] font-semibold text-slate-600 block">
+                  ตัวอย่างลายเซ็นอัตโนมัติที่จะประทับบนใบวางบิล:
+                </span>
+                <div className="py-3 px-4 bg-slate-50 rounded-lg border border-dashed border-slate-300 flex flex-col items-center justify-center">
+                  <span className="font-['Mali','Caveat',cursive] italic font-semibold text-2xl text-indigo-950 tracking-wide select-none leading-none transform -rotate-1">
+                    {profile.name || 'ชื่อผู้วางบิล'}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full mt-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    ลงนามอิเล็กทรอนิกส์ (วันเวลาออกเอกสาร)
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 italic">
+                  * ระบบจะนำชื่อของคุณมาสร้างเป็นลายเซ็นฟอนต์ลายมือพร้อมประทับวันเวลาออกบิลโดยอัตโนมัติ
+                </p>
+              </div>
+            )}
+
+            {profile.signatureMode === 'drawn' && (
+              <div className="p-4 bg-white rounded-xl border border-slate-200 space-y-3">
+                <span className="text-[11px] font-semibold text-slate-700 block">
+                  วาดลายมือชื่อของคุณในกรอบด้านล่าง:
+                </span>
+                <SignaturePad
+                  initialDataUrl={profile.signatureDataUrl}
+                  onSaveSignature={dataUrl => {
+                    setProfile(prev => ({ ...prev, signatureDataUrl: dataUrl }));
+                  }}
+                  onClearSignature={() => {
+                    setProfile(prev => ({ ...prev, signatureDataUrl: '' }));
+                  }}
+                />
+              </div>
+            )}
+
+            {profile.signatureMode === 'none' && (
+              <div className="p-3 bg-white rounded-xl border border-slate-200 text-center text-xs text-slate-500">
+                เอกสารจะเว้นช่องว่างพร้อมเส้นประเพื่อให้พิมพ์ออกไปเซ็นด้วยปากกาจริง
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4">

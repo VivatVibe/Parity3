@@ -4,7 +4,8 @@ import { TAX_CATEGORIES } from '../domain/tax';
 import { generatePromptPayQrDataUrl } from '../domain/promptpay';
 import { thaiBahtText } from '../utils/thaiBaht';
 import { formatLineInvoiceMessage, encodeInvoiceToShareUrl } from '../utils/shareInvoice';
-import { X, Printer, Eye, MessageCircle, Copy, Check, Share2 } from 'lucide-react';
+import { SignatureBlock } from './SignatureBlock';
+import { X, Printer, Eye, MessageCircle, Copy, Check, Share2, Info } from 'lucide-react';
 
 interface Props {
   invoice: Invoice;
@@ -52,8 +53,8 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto font-['Sarabun',sans-serif]">
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-6 border border-slate-200 print:border-none print:shadow-none print:m-0 print:p-0 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto font-['Sarabun',sans-serif] print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:overflow-visible">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-6 border border-slate-200 overflow-hidden print:static print:w-full print:max-w-none print:m-0 print:p-0 print:border-none print:shadow-none print:overflow-visible">
         
         {/* Floating Toolbar (hidden in print) */}
         <div className="no-print flex flex-wrap items-center justify-between gap-3 px-6 py-3.5 bg-slate-900 text-white">
@@ -106,10 +107,11 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
             {/* Print / PDF button */}
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-semibold text-white transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-semibold text-white transition cursor-pointer shadow-xs"
+              title="พิมพ์เอกสาร หรือ บันทึกเป็นไฟล์ PDF"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">พิมพ์ / PDF</span>
+              <span>พิมพ์ / บันทึก PDF</span>
             </button>
 
             <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
@@ -118,8 +120,17 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
           </div>
         </div>
 
+        {/* Print guidance banner in preview mode (hidden in print) */}
+        <div className="no-print bg-indigo-950 text-indigo-200 px-6 py-1.5 text-[11px] flex items-center justify-between border-b border-indigo-900/50">
+          <span className="flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            💡 ในหน้าต่างสั่งพิมพ์ เลือกปลายทางเป็น <strong className="text-white font-semibold">"บันทึกเป็น PDF (Save as PDF)"</strong> เพื่อเซฟไฟล์ส่งลูกค้า
+          </span>
+          <span className="text-slate-400 text-[10px] hidden md:inline">จัดสเกลมาตรฐาน A4 Portrait</span>
+        </div>
+
         {/* Printable Invoice Page */}
-        <div className="p-8 sm:p-12 text-slate-800 bg-white">
+        <div id="printable-invoice" className="p-8 sm:p-10 text-slate-800 bg-white">
           {/* Header */}
           <div className="flex justify-between items-start pb-6 border-b-2 border-slate-900">
             <div>
@@ -234,17 +245,13 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
           </div>
 
           {/* Signature Line */}
-          <div className="mt-12 pt-6 grid grid-cols-2 gap-12 text-center text-xs">
-            <div>
-              <div className="border-b border-slate-400 w-48 mx-auto pb-8"></div>
-              <div className="mt-2 font-medium text-slate-700">(...........................................................)</div>
-              <div className="text-slate-500">ผู้รับวางบิล / วันที่</div>
-            </div>
-            <div>
-              <div className="border-b border-slate-400 w-48 mx-auto pb-8"></div>
-              <div className="mt-2 font-medium text-slate-700">({issuer.name})</div>
-              <div className="text-slate-500">ผู้วางบิล / ผู้รับเงิน</div>
-            </div>
+          <div className="mt-8 pt-6 grid grid-cols-2 gap-8 text-center text-xs avoid-break">
+            <SignatureBlock isRecipient={true} issuer={issuer} />
+            <SignatureBlock
+              issuer={issuer}
+              issueDate={invoice.issueDate}
+              roleTitle="ผู้วางบิล / ผู้รับเงิน"
+            />
           </div>
         </div>
 

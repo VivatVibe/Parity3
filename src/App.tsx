@@ -174,14 +174,18 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 md:pb-8">
+      {/* Main Content Area (hidden during print when print preview modal is open) */}
+      <main className={`flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-24 md:pb-8 ${showPrintModal ? 'no-print' : ''}`}>
         {activeTab === 'invoices' && (
           <InvoiceList
             invoices={invoices}
             issuer={issuer}
             selectedInvoice={selectedInvoice}
             onSelectInvoice={handleSelectInvoice}
+            onOpenPrint={(inv) => {
+              setSelectedInvoice(inv);
+              setShowPrintModal(true);
+            }}
             onUpdateInvoice={handleUpdateInvoice}
             onToggle50Tawi={handleToggle50Tawi}
             onDeleteInvoice={handleDeleteInvoice}

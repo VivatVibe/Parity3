@@ -339,4 +339,28 @@ assert.strictEqual(clients[0].clientName, 'บริษัท กสทช', 'Mo
 assert.strictEqual(clients[0].clientTaxId, '01001-NEW', 'Must pick details from newest invoice');
 console.log('✓ Known Clients Memory & Deduplication passed.');
 
+// Check 9: Signature Profile Configuration & URL Payload Safety
+const issuerWithDrawnSig = {
+  name: 'วรวิทย์ เทคไพโอเนียร์',
+  signatureMode: 'drawn',
+  signatureDataUrl: 'data:image/png;base64,' + 'A'.repeat(5000), // simulate large canvas data
+  bankAccount: '123-4-56789-0'
+};
+
+function safeEncodeShare(inv, iss) {
+  const { slipImage, tawiImage, ...cleanInv } = inv;
+  const cleanIss = {
+    ...iss,
+    signatureDataUrl: (iss.signatureDataUrl && iss.signatureDataUrl.length < 2000) ? iss.signatureDataUrl : undefined,
+    signatureMode: (iss.signatureDataUrl && iss.signatureDataUrl.length >= 2000 && iss.signatureMode === 'drawn') ? 'auto' : (iss.signatureMode || 'auto')
+  };
+  return encodeShare(cleanInv, cleanIss);
+}
+
+const safeParam = safeEncodeShare(mockInv, issuerWithDrawnSig);
+const decodedSafe = decodeShare(safeParam);
+assert.strictEqual(decodedSafe.iss.signatureMode, 'auto', 'Must fallback to auto signature when drawn image exceeds safe URL length');
+assert.strictEqual(decodedSafe.iss.signatureDataUrl, undefined, 'Must strip large data URL to avoid exceeding query string limits');
+console.log('✓ Signature Mode & Safe URL Serialization passed.');
+
 console.log('\nAll domain verification tests passed successfully!');

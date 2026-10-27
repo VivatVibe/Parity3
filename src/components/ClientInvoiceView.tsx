@@ -3,6 +3,7 @@ import { Invoice, IssuerProfile } from '../domain/storage';
 import { TAX_CATEGORIES } from '../domain/tax';
 import { generatePromptPayQrDataUrl } from '../domain/promptpay';
 import { thaiBahtText } from '../utils/thaiBaht';
+import { SignatureBlock } from './SignatureBlock';
 import { Printer, Copy, Check, ShieldCheck, ArrowLeft, Share2 } from 'lucide-react';
 
 interface Props {
@@ -68,7 +69,7 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
       </div>
 
       {/* Main Invoice Card Paper */}
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm p-8 sm:p-12 text-slate-800 text-xs">
+      <div id="printable-invoice" className="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200/90 shadow-sm p-8 sm:p-10 text-slate-800 text-xs">
         {/* Header */}
         <div className="flex justify-between items-start pb-6 border-b-2 border-slate-900">
           <div>
@@ -202,17 +203,13 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
         </div>
 
         {/* Signature Line */}
-        <div className="mt-12 pt-6 grid grid-cols-2 gap-12 text-center text-xs">
-          <div>
-            <div className="border-b border-slate-400 w-48 mx-auto pb-8"></div>
-            <div className="mt-2 font-medium text-slate-700">(...........................................................)</div>
-            <div className="text-slate-500">ผู้รับวางบิล / วันที่</div>
-          </div>
-          <div>
-            <div className="border-b border-slate-400 w-48 mx-auto pb-8"></div>
-            <div className="mt-2 font-medium text-slate-700">({issuer.name})</div>
-            <div className="text-slate-500">ผู้วางบิล / ผู้รับเงิน</div>
-          </div>
+        <div className="mt-8 pt-6 grid grid-cols-2 gap-8 text-center text-xs avoid-break">
+          <SignatureBlock isRecipient={true} issuer={issuer} />
+          <SignatureBlock
+            issuer={issuer}
+            issueDate={invoice.issueDate}
+            roleTitle="ผู้วางบิล / ผู้รับเงิน"
+          />
         </div>
       </div>
     </div>

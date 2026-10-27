@@ -66,9 +66,16 @@ async function runAudit() {
 
   // Verify full-screen invoice preview modal opened on mobile
   const hasModalPreview = await page.evaluate(() => {
-    return document.querySelector('.p-8.sm\\:p-12') !== null;
+    return document.querySelector('#printable-invoice') !== null;
   });
-  console.log(`[Mobile] Tap invoice opens full-screen preview modal: ${hasModalPreview ? 'PASS' : 'FAIL'}`);
+  console.log(`[Mobile] Tap invoice opens full-screen preview modal with #printable-invoice: ${hasModalPreview ? 'PASS' : 'FAIL'}`);
+
+  // Check Signature element is rendered
+  const hasSignature = await page.evaluate(() => {
+    const el = document.querySelector('#printable-invoice');
+    return el && el.textContent.includes('ผู้วางบิล / ผู้รับเงิน') && (el.textContent.includes('ลงนามอิเล็กทรอนิกส์') || el.querySelector('img[alt="ลายมือชื่อดิจิทัล"]'));
+  });
+  console.log(`[Mobile] Automated signature rendered on invoice: ${hasSignature ? 'PASS' : 'FAIL'}`);
 
   // Check QR Code image is generated
   const qrGenerated = await page.evaluate(() => {
@@ -181,6 +188,34 @@ async function runAudit() {
   await new Promise(r => setTimeout(r, 400));
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'desktop-1440-bento-tax.png') });
   console.log('[Desktop] Screenshots saved to screenshots/desktop-1440-*.png\n');
+
+  // Switch to Profile & Signature configuration
+  await page.evaluate(() => {
+    const buttons = Array.from(document.querySelectorAll('header nav button'));
+    const profileBtn = buttons.find(b => b.textContent.includes('โปรไฟล์'));
+    if (profileBtn) profileBtn.click();
+  });
+  await new Promise(r => setTimeout(r, 400));
+
+  const hasSignatureSettings = await page.evaluate(() => {
+    return document.body.textContent.includes('ลายเซ็นผู้วางบิล / ผู้รับเงิน') &&
+           document.body.textContent.includes('ลายเซ็นอัตโนมัติ') &&
+           document.body.textContent.includes('วาดลายมือชื่อ');
+  });
+  console.log(`[Desktop] Profile signature management UI active: ${hasSignatureSettings ? 'PASS' : 'FAIL'}`);
+
+  // Switch to 'วาดลายมือชื่อ' to test SignaturePad canvas
+  await page.evaluate(() => {
+    const btns = Array.from(document.querySelectorAll('button'));
+    const drawBtn = btns.find(b => b.textContent.includes('วาดลายมือชื่อ'));
+    if (drawBtn) drawBtn.click();
+  });
+  await new Promise(r => setTimeout(r, 300));
+
+  const hasCanvas = await page.evaluate(() => document.querySelector('canvas') !== null);
+  console.log(`[Desktop] Interactive HTML5 Signature Canvas rendered: ${hasCanvas ? 'PASS' : 'FAIL'}`);
+
+  await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'desktop-1440-signature-pad.png') });
 
   await browser.close();
   console.log('All audits completed successfully!');
