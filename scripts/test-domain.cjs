@@ -219,4 +219,46 @@ assert.strictEqual(sampleCsvRow, '"INV-001","บริษัท ทดสอบ,
 assert('\uFEFF'.charCodeAt(0) === 0xFEFF, 'BOM marker is valid UTF-8 BOM');
 console.log('✓ CSV generator and UTF-8 BOM escaping passed.');
 
+// Check 6: Backup Payload Schema Validation
+function validateBackupPayload(raw) {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new Error('รูปแบบไฟล์ไม่ถูกต้อง: ข้อมูลไม่ใช่ JSON Object');
+  }
+  const obj = raw;
+  if (obj.app !== 'thai_freelancer_billing') {
+    throw new Error('ไฟล์นี้ไม่ใช่ไฟล์สำรองข้อมูลของระบบ Multi-Income Billing');
+  }
+  if (obj.version !== 1) {
+    throw new Error(`ไม่รองรับไฟล์เวอร์ชัน ${obj.version}`);
+  }
+  if (!Array.isArray(obj.invoices)) {
+    throw new Error('ข้อมูลไม่ถูกต้อง: ไม่พบรายการใบแจ้งหนี้ (invoices array)');
+  }
+  for (let i = 0; i < obj.invoices.length; i++) {
+    const inv = obj.invoices[i];
+    if (typeof inv !== 'object' || inv === null || !inv.id || !inv.invoiceNumber || typeof inv.subtotal !== 'number') {
+      throw new Error(`ข้อมูลบิลลำดับที่ ${i + 1} ไม่ถูกต้อง`);
+    }
+  }
+  return raw;
+}
+
+const validBackup = {
+  app: 'thai_freelancer_billing',
+  version: 1,
+  exportedAt: new Date().toISOString(),
+  issuer: { name: 'ผู้ทดสอบ' },
+  invoices: [{ id: '1', invoiceNumber: 'INV-1', subtotal: 1000 }]
+};
+
+assert.doesNotThrow(() => validateBackupPayload(validBackup), 'Valid backup must pass');
+
+const invalidApp = { ...validBackup, app: 'other_system' };
+assert.throws(() => validateBackupPayload(invalidApp), /ไม่ใช่ไฟล์สำรองข้อมูล/);
+
+const invalidInvoice = { ...validBackup, invoices: [{ id: '1' }] };
+assert.throws(() => validateBackupPayload(invalidInvoice), /ไม่ถูกต้อง/);
+
+console.log('✓ Backup payload validation passed.');
+
 console.log('\nAll domain verification tests passed successfully!');

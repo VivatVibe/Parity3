@@ -139,7 +139,15 @@ export default function App() {
         {activeTab === 'tax' && <Pnd90Dashboard invoices={invoices} />}
 
         {activeTab === 'profile' && (
-          <IssuerProfileView issuer={issuer} onUpdate={setIssuer} />
+          <IssuerProfileView
+            issuer={issuer}
+            invoices={invoices}
+            onUpdate={setIssuer}
+            onRestoreData={(newIssuer, newInvoices) => {
+              setIssuer(newIssuer);
+              setInvoices(newInvoices);
+            }}
+          />
         )}
       </main>
 
