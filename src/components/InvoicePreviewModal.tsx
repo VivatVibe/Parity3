@@ -179,12 +179,21 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {invoice.items.map((it, idx) => (
-                    <tr key={it.id}>
-                      <td className="py-2 px-2.5 text-center text-slate-400">{idx + 1}</td>
-                      <td className="py-2 px-2.5 font-medium text-slate-900">{it.description}</td>
-                      <td className="py-2 px-2.5 text-center font-mono-numbers">{it.quantity}</td>
-                      <td className="py-2 px-2.5 text-right font-mono-numbers">฿{it.unitPrice.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                      <td className="py-2 px-2.5 text-right font-bold font-mono-numbers">฿{it.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                    <tr key={it.id} className="print:h-10">
+                      <td className="py-2 px-2.5 text-center text-slate-400 print:py-2.5">{idx + 1}</td>
+                      <td className="py-2 px-2.5 font-medium text-slate-900 print:py-2.5">{it.description}</td>
+                      <td className="py-2 px-2.5 text-center font-mono-numbers print:py-2.5">{it.quantity}</td>
+                      <td className="py-2 px-2.5 text-right font-mono-numbers print:py-2.5">฿{it.unitPrice.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-2 px-2.5 text-right font-bold font-mono-numbers print:py-2.5">฿{it.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  ))}
+                  {Array.from({ length: Math.max(0, 6 - invoice.items.length) }).map((_, idx) => (
+                    <tr key={`empty-${idx}`} className="h-6 print:h-9 text-slate-300">
+                      <td className="py-1 px-2.5 text-center text-slate-200">{invoice.items.length + idx + 1}</td>
+                      <td className="py-1 px-2.5">&nbsp;</td>
+                      <td className="py-1 px-2.5">&nbsp;</td>
+                      <td className="py-1 px-2.5">&nbsp;</td>
+                      <td className="py-1 px-2.5">&nbsp;</td>
                     </tr>
                   ))}
                 </tbody>
@@ -228,27 +237,27 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
 
           <div className="invoice-body-bottom">
             {/* Payment & PromptPay Section */}
-            <div className="mt-3.5 p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px]">
-              <div className="space-y-0.5 flex-1">
-                <div className="font-bold text-slate-900 text-xs font-heading">ช่องทางการชำระเงิน (Payment Methods)</div>
+            <div className="mt-3.5 print:mt-4 p-3.5 print:p-4 rounded-xl border border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] print:text-xs">
+              <div className="space-y-0.5 print:space-y-1 flex-1">
+                <div className="font-bold text-slate-900 text-xs print:text-sm font-heading">ช่องทางการชำระเงิน (Payment Methods)</div>
                 <div className="text-slate-700 font-medium">โอนเงินเข้าบัญชีธนาคาร:</div>
                 <div className="text-slate-900 font-bold">{issuer.bankName} เลขที่บัญชี: <span className="font-mono-numbers">{issuer.bankAccount}</span></div>
                 <div className="text-slate-600">ชื่อบัญชี: {issuer.bankAccountName}</div>
                 <div className="text-slate-700 mt-1">พร้อมเพย์ (PromptPay): <span className="font-mono-numbers font-bold text-indigo-700">{issuer.promptPayId}</span></div>
-                <div className="text-[10px] text-slate-500 italic mt-0.5">* กรุณาจัดส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย (ใบ 50 ทวิ 3%) มายังที่อยู่ผู้รับเงิน</div>
+                <div className="text-[10px] print:text-[11px] text-slate-500 italic mt-0.5">* กรุณาจัดส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย (ใบ 50 ทวิ 3%) มายังที่อยู่ผู้รับเงิน</div>
               </div>
 
               {qrUrl && (
-                <div className="flex flex-col items-center bg-white p-2 rounded-lg border border-slate-200 shadow-2xs shrink-0">
-                  <img src={qrUrl} alt="PromptPay QR Code" className="w-24 h-24 object-contain" />
-                  <div className="text-[9px] font-bold text-slate-700 mt-0.5 tracking-wider uppercase">Thai QR Payment</div>
-                  <div className="text-[10px] font-bold text-indigo-700 font-mono-numbers">฿{invoice.netTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</div>
+                <div className="flex flex-col items-center bg-white p-2 print:p-2.5 rounded-lg border border-slate-200 shadow-2xs shrink-0">
+                  <img src={qrUrl} alt="PromptPay QR Code" className="w-24 h-24 print:w-28 print:h-28 object-contain" />
+                  <div className="text-[9px] print:text-[10px] font-bold text-slate-700 mt-0.5 tracking-wider uppercase">Thai QR Payment</div>
+                  <div className="text-[10px] print:text-xs font-bold text-indigo-700 font-mono-numbers">฿{invoice.netTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</div>
                 </div>
               )}
             </div>
 
             {/* Signature Line */}
-            <div className="mt-4 pt-3 border-t border-slate-200/60 grid grid-cols-2 gap-6 text-center text-xs avoid-break items-end">
+            <div className="mt-4 print:mt-6 pt-3 print:pt-4 border-t border-slate-200/60 grid grid-cols-2 gap-6 text-center text-xs avoid-break items-end">
               <SignatureBlock isRecipient={true} issuer={issuer} />
               <SignatureBlock
                 issuer={issuer}

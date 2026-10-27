@@ -118,12 +118,21 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {invoice.items.map((it, idx) => (
-                  <tr key={it.id}>
-                    <td className="py-2 px-2.5 text-center text-slate-400">{idx + 1}</td>
-                    <td className="py-2 px-2.5 font-medium text-slate-900">{it.description}</td>
-                    <td className="py-2 px-2.5 text-center font-mono-numbers">{it.quantity}</td>
-                    <td className="py-2 px-2.5 text-right font-mono-numbers">฿{it.unitPrice.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                    <td className="py-2 px-2.5 text-right font-bold font-mono-numbers">฿{it.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                  <tr key={it.id} className="print:h-10">
+                    <td className="py-2 px-2.5 text-center text-slate-400 print:py-2.5">{idx + 1}</td>
+                    <td className="py-2 px-2.5 font-medium text-slate-900 print:py-2.5">{it.description}</td>
+                    <td className="py-2 px-2.5 text-center font-mono-numbers print:py-2.5">{it.quantity}</td>
+                    <td className="py-2 px-2.5 text-right font-mono-numbers print:py-2.5">฿{it.unitPrice.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                    <td className="py-2 px-2.5 text-right font-bold font-mono-numbers print:py-2.5">฿{it.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                  </tr>
+                ))}
+                {Array.from({ length: Math.max(0, 6 - invoice.items.length) }).map((_, idx) => (
+                  <tr key={`empty-${idx}`} className="h-6 print:h-9 text-slate-300">
+                    <td className="py-1 px-2.5 text-center text-slate-200">{invoice.items.length + idx + 1}</td>
+                    <td className="py-1 px-2.5">&nbsp;</td>
+                    <td className="py-1 px-2.5">&nbsp;</td>
+                    <td className="py-1 px-2.5">&nbsp;</td>
+                    <td className="py-1 px-2.5">&nbsp;</td>
                   </tr>
                 ))}
               </tbody>
