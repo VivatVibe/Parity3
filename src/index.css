@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@layer base {
+  h1, h2, h3, h4, .font-heading {
+    font-family: 'Prompt', sans-serif;
+  }
+}
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}

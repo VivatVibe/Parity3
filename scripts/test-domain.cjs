@@ -1,0 +1,207 @@
+const assert = require('assert');
+
+// 1. Test Thai Baht Text
+function thaiBahtText(num) {
+  if (isNaN(num)) return '';
+  if (num === 0) return 'ศูนย์บาทถ้วน';
+
+  const numbers = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
+  const units = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน'];
+
+  function readGroup(str) {
+    let result = '';
+    const len = str.length;
+    for (let i = 0; i < len; i++) {
+      const digit = parseInt(str.charAt(i), 10);
+      const pos = len - i - 1;
+      if (digit === 0) continue;
+      if (pos === 0 && digit === 1 && len > 1) {
+        result += 'เอ็ด';
+      } else if (pos === 1 && digit === 2) {
+        result += 'ยี่สิบ';
+      } else if (pos === 1 && digit === 1) {
+        result += 'สิบ';
+      } else {
+        result += numbers[digit] + units[pos];
+      }
+    }
+    return result;
+  }
+
+  const fixed = num.toFixed(2);
+  const [bahtPart, satangPart] = fixed.split('.');
+  let bahtStr = '';
+
+  const groupSize = 6;
+  const groups = [];
+  let remaining = bahtPart;
+  while (remaining.length > groupSize) {
+    groups.unshift(remaining.slice(-groupSize));
+    remaining = remaining.slice(0, -groupSize);
+  }
+  groups.unshift(remaining);
+
+  for (let i = 0; i < groups.length; i++) {
+    const groupRead = readGroup(groups[i]);
+    if (groupRead) {
+      bahtStr += groupRead;
+      if (i < groups.length - 1) bahtStr += 'ล้าน';
+    }
+  }
+
+  let satangStr = '';
+  const satangVal = parseInt(satangPart, 10);
+  if (satangVal > 0) {
+    satangStr = readGroup(satangPart) + 'สตางค์';
+  }
+
+  if (!bahtStr && satangStr) return satangStr;
+  return `${bahtStr || 'ศูนย์'}บาท${satangStr || 'ถ้วน'}`;
+}
+
+// 2. Test CRC16 and PromptPay EMVCo
+function crc16(data) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < data.length; i++) {
+    crc ^= data.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      if ((crc & 0x8000) !== 0) {
+        crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
+      } else {
+        crc = (crc << 1) & 0xFFFF;
+      }
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+function tlv(tag, value) {
+  const len = value.length.toString().padStart(2, '0');
+  return `${tag}${len}${value}`;
+}
+
+function formatPromptPayTarget(target) {
+  const cleaned = target.replace(/[^0-9]/g, '');
+  if (cleaned.length === 10 && cleaned.startsWith('0')) {
+    return {
+      subTag: '01',
+      formatted: `0066${cleaned.slice(1)}`
+    };
+  }
+  return {
+    subTag: '02',
+    formatted: cleaned
+  };
+}
+
+function generatePromptPayPayload(target, amount) {
+  const { subTag, formatted } = formatPromptPayTarget(target);
+  const tag00 = tlv('00', '01');
+  const tag01 = tlv('01', amount !== undefined && amount > 0 ? '12' : '11');
+  const aid = tlv('00', 'A000000677010111');
+  const recipient = tlv(subTag, formatted);
+  const tag29 = tlv('29', `${aid}${recipient}`);
+  const tag53 = tlv('53', '764');
+  let tag54 = '';
+  if (amount !== undefined && amount > 0) {
+    tag54 = tlv('54', amount.toFixed(2));
+  }
+  const tag58 = tlv('58', 'TH');
+  const basePayload = `${tag00}${tag01}${tag29}${tag53}${tag54}${tag58}6304`;
+  const checksum = crc16(basePayload);
+  return `${basePayload}${checksum}`;
+}
+
+// 3. Test Billing calculation
+function roundCurrency(val) {
+  return Math.round(val * 100) / 100;
+}
+
+function calculateBilling(subtotal, whtRate = 0.03) {
+  const roundedSubtotal = roundCurrency(subtotal);
+  const whtAmount = roundCurrency(roundedSubtotal * whtRate);
+  const netTotal = roundCurrency(roundedSubtotal - whtAmount);
+  return { subtotal: roundedSubtotal, whtRate, whtAmount, netTotal };
+}
+
+// 4. Test PND90 Aggregator
+function aggregatePnd90(invoices) {
+  const byCategory = {
+    '40_2': { grossIncome: 0, whtDeducted: 0, pending50TawiCount: 0, received50TawiCount: 0 },
+    '40_6': { grossIncome: 0, whtDeducted: 0, pending50TawiCount: 0, received50TawiCount: 0 },
+    '40_8': { grossIncome: 0, whtDeducted: 0, pending50TawiCount: 0, received50TawiCount: 0 }
+  };
+
+  let totalGrossIncome = 0;
+  let totalWhtCredit = 0;
+  let pending50TawiTotal = 0;
+  let received50TawiTotal = 0;
+
+  for (const inv of invoices) {
+    if (inv.status === 'cancelled') continue;
+    const cat = byCategory[inv.category] || byCategory['40_2'];
+    cat.grossIncome = roundCurrency(cat.grossIncome + inv.subtotal);
+    cat.whtDeducted = roundCurrency(cat.whtDeducted + inv.whtAmount);
+    if (inv.has50Tawi) {
+      cat.received50TawiCount += 1;
+      received50TawiTotal += 1;
+    } else {
+      cat.pending50TawiCount += 1;
+      pending50TawiTotal += 1;
+    }
+    totalGrossIncome = roundCurrency(totalGrossIncome + inv.subtotal);
+    totalWhtCredit = roundCurrency(totalWhtCredit + inv.whtAmount);
+  }
+
+  return { totalGrossIncome, totalWhtCredit, pending50TawiTotal, received50TawiTotal, byCategory };
+}
+
+console.log('Running test-domain verification checks...');
+
+// Check 1: Thai Baht Text
+assert.strictEqual(thaiBahtText(43650), 'สี่หมื่นสามพันหกร้อยห้าสิบบาทถ้วน');
+assert.strictEqual(thaiBahtText(19400), 'หนึ่งหมื่นเก้าพันสี่ร้อยบาทถ้วน');
+assert.strictEqual(thaiBahtText(100.50), 'หนึ่งร้อยบาทห้าสิบสตางค์');
+console.log('✓ thaiBahtText passed.');
+
+// Check 2: PromptPay Payload Generation
+const payload = generatePromptPayPayload('0812345678', 43650);
+assert(payload.startsWith('000201010212'), 'Dynamic QR payload must start with Tag 00=01 and Tag 01=12');
+assert(payload.includes('A000000677010111'), 'Must include PromptPay AID');
+assert(payload.includes('0066812345678'), 'Must format phone to international 0066...');
+assert(payload.includes('5303764'), 'Must have THB currency 764');
+assert(payload.includes('540843650.00'), 'Must have formatted amount');
+assert(payload.includes('5802TH'), 'Must have Country Code TH');
+assert(payload.length >= 60, 'Payload length valid');
+console.log('✓ generatePromptPayPayload passed. Payload sample:', payload);
+
+// Check 3: Billing Calculation (3% Withholding Tax)
+const bill1 = calculateBilling(45000);
+assert.strictEqual(bill1.subtotal, 45000);
+assert.strictEqual(bill1.whtAmount, 1350); // 45000 * 0.03
+assert.strictEqual(bill1.netTotal, 43650);
+
+const bill2 = calculateBilling(20000);
+assert.strictEqual(bill2.whtAmount, 600); // 20000 * 0.03
+assert.strictEqual(bill2.netTotal, 19400);
+console.log('✓ calculateBilling 3% WHT passed.');
+
+// Check 4: P.N.D. 90 Aggregation across multi-stream categories
+const testInvoices = [
+  { category: '40_2', subtotal: 45000, whtAmount: 1350, has50Tawi: true, status: 'paid' },
+  { category: '40_6', subtotal: 30000, whtAmount: 900, has50Tawi: false, status: 'sent' },
+  { category: '40_8', subtotal: 20000, whtAmount: 600, has50Tawi: true, status: 'paid' },
+  { category: '40_2', subtotal: 10000, whtAmount: 300, has50Tawi: false, status: 'cancelled' }
+];
+
+const summary = aggregatePnd90(testInvoices);
+assert.strictEqual(summary.totalGrossIncome, 95000); // 45000 + 30000 + 20000 (cancelled ignored)
+assert.strictEqual(summary.totalWhtCredit, 2850); // 1350 + 900 + 600
+assert.strictEqual(summary.received50TawiTotal, 2);
+assert.strictEqual(summary.pending50TawiTotal, 1);
+assert.strictEqual(summary.byCategory['40_2'].grossIncome, 45000);
+assert.strictEqual(summary.byCategory['40_6'].grossIncome, 30000);
+assert.strictEqual(summary.byCategory['40_8'].grossIncome, 20000);
+console.log('✓ aggregatePnd90 multi-stream categorization passed.');
+
+console.log('\nAll domain verification tests passed successfully!');
