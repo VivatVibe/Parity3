@@ -6,6 +6,8 @@ import { InvoicePreviewModal } from './components/InvoicePreviewModal';
 import { Pnd90Dashboard } from './components/Pnd90Dashboard';
 import { IssuerProfileView } from './components/IssuerProfileView';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { ClientInvoiceView } from './components/ClientInvoiceView';
+import { decodeInvoiceFromShareParam } from './utils/shareInvoice';
 import { FileText, PieChart, User, PlusCircle, Sparkles } from 'lucide-react';
 
 export default function App() {
@@ -15,8 +17,20 @@ export default function App() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
+  const [sharedView, setSharedView] = useState<{ invoice: Invoice; issuer: IssuerProfile } | null>(null);
 
   useEffect(() => {
+    // Check if opened via share link ?view=...
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get('view');
+    if (viewParam) {
+      const decoded = decodeInvoiceFromShareParam(viewParam);
+      if (decoded) {
+        setSharedView(decoded);
+        return;
+      }
+    }
+
     const loaded = loadInvoices();
     setInvoices(loaded);
     if (loaded.length > 0) {
@@ -71,6 +85,20 @@ export default function App() {
       setShowPrintModal(true);
     }
   };
+
+  // If opened via share link, show the client-facing public view
+  if (sharedView) {
+    return (
+      <ClientInvoiceView
+        invoice={sharedView.invoice}
+        issuer={sharedView.issuer}
+        onBackToApp={() => {
+          window.history.replaceState({}, '', window.location.pathname);
+          setSharedView(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-['Sarabun',sans-serif]">

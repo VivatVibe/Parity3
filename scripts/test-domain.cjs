@@ -261,4 +261,51 @@ assert.throws(() => validateBackupPayload(invalidInvoice), /ไม่ถูก�
 
 console.log('✓ Backup payload validation passed.');
 
+// Check 7: LINE Message & Share URL Encoding/Decoding
+function formatLineInvoiceMessage(invoice, issuer, shareUrl) {
+  const itemsText = invoice.items.map(it => `• ${it.description} (x${it.quantity}): ฿${it.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`).join('\n');
+  const urlPart = shareUrl ? `\n\n📄 ดูใบแจ้งหนี้ฉบับเต็มและสแกน QR ได้ที่:\n${shareUrl}` : '';
+  return `เรียน ${invoice.clientName}\n\nขอส่งสรุปรายการวางบิล ${invoice.invoiceNumber}\n(ครบกำหนดชำระ: ${invoice.dueDate})\n\n📋 รายละเอียดงาน:\n${itemsText}\n\n💰 ยอดสรุปการชำระเงิน:\n• รวมเป็นเงิน: ฿${invoice.subtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}\n• หักภาษี ณ ที่จ่าย 3%: -฿${invoice.whtAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}\n• ยอดชำระสุทธิ: ฿${invoice.netTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} (${thaiBahtText(invoice.netTotal)})\n\n🏦 ช่องทางการโอนเงิน:\n• ธนาคาร: ${issuer.bankName}\n• เลขที่บัญชี: ${issuer.bankAccount}\n• ชื่อบัญชี: ${issuer.bankAccountName}\n• พร้อมเพย์ (PromptPay): ${issuer.promptPayId}${urlPart}\n\n* เมื่อโอนเงินเรียบร้อยแล้ว รบกวนส่งสลิปและใบหัก ณ ที่จ่าย (50 ทวิ 3%) ให้ด้วยนะครับ ขอบคุณครับ`;
+}
+
+function encodeShare(inv, iss) {
+  const jsonStr = JSON.stringify({ inv, iss });
+  return Buffer.from(encodeURIComponent(jsonStr)).toString('base64');
+}
+
+function decodeShare(param) {
+  const jsonStr = decodeURIComponent(Buffer.from(param, 'base64').toString());
+  return JSON.parse(jsonStr);
+}
+
+const mockInv = {
+  invoiceNumber: 'INV-2026-001',
+  clientName: 'บริษัท ทดสอบ จำกัด',
+  dueDate: '2026-03-15',
+  items: [{ description: 'เขียนโค้ด', quantity: 1, amount: 20000 }],
+  subtotal: 20000,
+  whtAmount: 600,
+  netTotal: 19400
+};
+const mockIss = {
+  name: 'วรวิทย์',
+  bankName: 'KBANK',
+  bankAccount: '123-4-56789-0',
+  bankAccountName: 'นายวรวิทย์',
+  promptPayId: '0812345678'
+};
+
+const lineMsg = formatLineInvoiceMessage(mockInv, mockIss, 'https://example.com/?view=test');
+assert(lineMsg.includes('เรียน บริษัท ทดสอบ จำกัด'), 'LINE message must address client');
+assert(lineMsg.includes('19,400.00'), 'Must include net amount');
+assert(lineMsg.includes('หนึ่งหมื่นเก้าพันสี่ร้อยบาทถ้วน'), 'Must include Thai Baht text');
+assert(lineMsg.includes(mockIss.bankName), 'Must include bank name');
+assert(lineMsg.includes(mockIss.bankAccount), 'Must include bank account');
+
+const encodedParam = encodeShare(mockInv, mockIss);
+const decoded = decodeShare(encodedParam);
+assert.strictEqual(decoded.inv.invoiceNumber, 'INV-2026-001');
+assert.strictEqual(decoded.iss.bankAccount, '123-4-56789-0');
+console.log('✓ LINE Message & URL Share Encoding/Decoding passed.');
+
 console.log('\nAll domain verification tests passed successfully!');

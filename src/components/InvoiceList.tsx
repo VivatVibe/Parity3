@@ -5,6 +5,7 @@ import { downloadPnd90Csv } from '../utils/exportCsv';
 import { AttachmentModal } from './AttachmentModal';
 import { generatePromptPayQrDataUrl } from '../domain/promptpay';
 import { thaiBahtText } from '../utils/thaiBaht';
+import { formatLineInvoiceMessage, encodeInvoiceToShareUrl } from '../utils/shareInvoice';
 import {
   Plus,
   CheckCircle2,
@@ -18,7 +19,10 @@ import {
   Search,
   Filter,
   SlidersHorizontal,
-  ChevronRight
+  ChevronRight,
+  MessageCircle,
+  Check,
+  Share2
 } from 'lucide-react';
 
 interface Props {
@@ -47,8 +51,25 @@ export const InvoiceList: React.FC<Props> = ({
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [attachingInvoice, setAttachingInvoice] = useState<Invoice | null>(null);
   const [liveQrUrl, setLiveQrUrl] = useState<string>('');
+  const [copiedLine, setCopiedLine] = useState(false);
 
   const currentPreview = selectedInvoice || invoices[0] || null;
+
+  const handleCopyLine = () => {
+    if (!currentPreview) return;
+    const shareUrl = encodeInvoiceToShareUrl(currentPreview, issuer);
+    const msg = formatLineInvoiceMessage(currentPreview, issuer, shareUrl);
+    navigator.clipboard.writeText(msg);
+    setCopiedLine(true);
+    setTimeout(() => setCopiedLine(false), 2500);
+  };
+
+  const handleOpenLineApp = () => {
+    if (!currentPreview) return;
+    const shareUrl = encodeInvoiceToShareUrl(currentPreview, issuer);
+    const msg = formatLineInvoiceMessage(currentPreview, issuer, shareUrl);
+    window.open(`https://line.me/R/msg/text/?${encodeURIComponent(msg)}`, '_blank');
+  };
 
   useEffect(() => {
     if (currentPreview && issuer.promptPayId) {
@@ -357,13 +378,35 @@ export const InvoiceList: React.FC<Props> = ({
               </div>
 
               {/* Bottom Quick Actions */}
-              <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleCopyLine}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                      copiedLine
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                    }`}
+                    title="คัดลอกข้อความสรุปและบัญชีโอนสำหรับส่งใน LINE"
+                  >
+                    {copiedLine ? <Check className="w-3.5 h-3.5" /> : <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />}
+                    <span>{copiedLine ? 'คัดลอกแล้ว!' : 'คัดลอกส่ง LINE'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleOpenLineApp}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer border border-slate-200"
+                    title="เปิดแอป LINE ทันที"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>แชร์ LINE</span>
+                  </button>
+
                   <button
                     onClick={() => setAttachingInvoice(currentPreview)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer border border-slate-200"
                   >
-                    <Paperclip className="w-3.5 h-3.5" /> แนบสลิป/50ทวิ
+                    <Paperclip className="w-3.5 h-3.5" /> แนบหลักฐาน
                   </button>
                 </div>
 
