@@ -34,7 +34,8 @@ npm run build
 
 ---
 
-## เอกสารสถาปัตยกรรมและการ Deploy
+## เอกสารคู่มือและการ Deploy
 
+* [คู่มือการใช้งานระบบสำหรับผู้ใช้งาน (User Manual)](docs/user-guide.md)
 * [เอกสารสถาปัตยกรรมระบบ (System Architecture)](docs/architecture.md)
 * [คู่มือการ Deploy ขึ้น Cloudflare Pages (Deployment Guide)](docs/deploy-cloudflare-pages.md)
