@@ -245,7 +245,7 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
           </div>
 
           {/* Signature Line */}
-          <div className="mt-4 pt-3 border-t border-slate-200/60 grid grid-cols-2 gap-6 text-center text-xs avoid-break">
+          <div className="mt-4 pt-3 border-t border-slate-200/60 grid grid-cols-2 gap-6 text-center text-xs avoid-break items-end">
             <SignatureBlock isRecipient={true} issuer={issuer} />
             <SignatureBlock
               issuer={issuer}
