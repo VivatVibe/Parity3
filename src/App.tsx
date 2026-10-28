@@ -244,25 +244,25 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-['Sarabun',sans-serif]">
       {/* Top Header */}
-      <header className="no-print bg-white/80 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-indigo-600 via-indigo-700 to-blue-600 flex items-center justify-center text-white shadow-xs">
-              <FileText className="w-5 h-5" />
+      <header className="no-print bg-white/80 backdrop-blur-xl border-b border-slate-200/80 sticky top-0 z-40">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 h-16 flex items-center justify-between gap-1.5 sm:gap-2 overflow-x-hidden">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-[0_4px_14px_rgba(79,70,229,0.35)] shrink-0">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-bold text-slate-950 text-base font-heading">
-                  Multi-Income Billing
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h1 className="font-bold text-slate-950 text-base font-heading tracking-tight">
+                  Parity3
                 </h1>
                 {isPro ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
                     <Sparkles className="w-2.5 h-2.5 fill-amber-500 text-amber-500" /> PRO
                   </span>
                 ) : (
                   <button
                     onClick={() => setShowUpgradeModal(true)}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition"
+                    className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition cursor-pointer"
                   >
                     <Zap className="w-2.5 h-2.5 fill-indigo-500 text-indigo-500" /> อัปเกรด Pro
                   </button>
@@ -274,12 +274,12 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Navigation Tabs (Desktop) */}
-            <nav className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* Navigation Tabs (Desktop / Tablet Adaptive Pill) */}
+            <nav className="hidden md:flex items-center gap-0.5 sm:gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
               <button
                 onClick={() => setActiveTab('invoices')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2 sm:px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'invoices'
                     ? 'bg-white text-indigo-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -291,7 +291,7 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab('tax')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2 sm:px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'tax'
                     ? 'bg-white text-indigo-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
@@ -303,25 +303,25 @@ export default function App() {
 
               <button
                 onClick={() => setActiveTab('profile')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2 sm:px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'profile'
                     ? 'bg-white text-indigo-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <User className="w-4 h-4" />
-                <span>โปรไฟล์ผู้รับเงิน</span>
+                <span>โปรไฟล์</span>
               </button>
             </nav>
 
             {/* Switch to Landing Page */}
             <button
               onClick={() => setViewMode('landing')}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition cursor-pointer"
               title="ดูหน้าหลักแนะนำระบบและราคา"
             >
-              <Home className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden sm:inline">หน้าแรก</span>
+              <Home className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span className="text-[11px] sm:text-xs">หน้าแรก</span>
             </button>
 
             {/* Google Login / Account Info */}
@@ -337,7 +337,7 @@ export default function App() {
             {/* New Invoice Button (Desktop) */}
             <button
               onClick={() => setShowCreateModal(true)}
-              className="hidden lg:flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition shadow-xs cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl text-xs font-semibold transition shadow-[0_4px_14px_rgba(79,70,229,0.3)] cursor-pointer"
             >
               <PlusCircle className="w-4 h-4 stroke-[2.5]" />
               <span>ออกบิลใหม่</span>
