@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node scripts/test-domain.cjs"
+    "test": "node scripts/test-domain.cjs",
+    "check:migrations": "node scripts/check-migration-immutability.cjs"
   },
   "keywords": [],
   "author": "",

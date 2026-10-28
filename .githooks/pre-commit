@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+
+# Run migration immutability guard
+node scripts/check-migration-immutability.cjs
