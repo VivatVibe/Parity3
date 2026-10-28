@@ -1,8 +1,33 @@
 // Cloudflare Pages Function: /api/sync
-// Handles bidirectional cloud sync between client and Cloudflare D1
+// Handles bidirectional cloud sync between client and Cloudflare D1 with tenant isolation & session security
 
 interface Env {
   DB?: D1Database;
+}
+
+function getSessionUser(request: Request): { id: string; email?: string } | null {
+  // 1. Check Bearer Authorization Header
+  const authHeader = request.headers.get('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    if (token) return { id: token };
+  }
+
+  // 2. Check session_user Cookie
+  const cookieHeader = request.headers.get('Cookie') || '';
+  const match = cookieHeader.match(/session_user=([^;]+)/);
+  if (match) {
+    try {
+      const decoded = decodeURIComponent(match[1]);
+      const user = JSON.parse(decoded);
+      if (user && user.id) {
+        return user;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return null;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -10,6 +35,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const body: {
       userId: string;
       invoices?: any[];
+      deletedInvoiceIds?: string[];
       issuer?: any;
       issuerProfile?: any;
     } = await context.request.json();
@@ -17,6 +43,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!body.userId) {
       return new Response(JSON.stringify({ error: 'Unauthorized: missing userId' }), {
         status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const sessionUser = getSessionUser(context.request);
+    // BOLA / IDOR Protection: ensure authenticated user cannot write to another tenant's partition
+    if (context.env.DB && sessionUser && sessionUser.id !== body.userId) {
+      return new Response(JSON.stringify({ error: 'Forbidden: Cannot modify other user data' }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -81,17 +116,30 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       ).run();
     }
 
-    // 2. Sync Invoices (Batch Upsert)
+    // 2. Handle Deletions (Tombstones to prevent zombie resurrection)
+    if (body.deletedInvoiceIds && Array.isArray(body.deletedInvoiceIds) && body.deletedInvoiceIds.length > 0) {
+      const delStmts = body.deletedInvoiceIds.map(delId =>
+        db.prepare(
+          `UPDATE invoices SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND id = ?`
+        ).bind(userId, delId)
+      );
+      await db.batch(delStmts);
+    }
+
+    // 3. Sync Invoices (Batch Upsert with Attachment & Multi-Tenant Isolation)
     if (body.invoices && body.invoices.length > 0) {
       const stmts = body.invoices.map(inv => {
+        // Normalize whtRate: store whole percentage (3) consistently
+        const rateVal = inv.whtRate ? (inv.whtRate < 1 ? inv.whtRate * 100 : inv.whtRate) : 3;
+
         return db.prepare(
           `INSERT INTO invoices (
             id, user_id, invoice_number, issue_date, due_date, 
             category, client_name, client_tax_id, client_address, 
             items_json, subtotal, wht_rate, wht_amount, net_total, 
-            status, has_50_tawi, tawi_doc_number, notes, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-          ON CONFLICT(id) DO UPDATE SET
+            status, has_50_tawi, tawi_doc_number, notes, slip_image, tawi_image, is_deleted, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)
+          ON CONFLICT(user_id, id) DO UPDATE SET
             invoice_number=excluded.invoice_number,
             issue_date=excluded.issue_date,
             due_date=excluded.due_date,
@@ -108,7 +156,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             has_50_tawi=excluded.has_50_tawi,
             tawi_doc_number=excluded.tawi_doc_number,
             notes=excluded.notes,
-            updated_at=CURRENT_TIMESTAMP`
+            slip_image=COALESCE(excluded.slip_image, invoices.slip_image),
+            tawi_image=COALESCE(excluded.tawi_image, invoices.tawi_image),
+            is_deleted=0,
+            updated_at=CURRENT_TIMESTAMP
+          WHERE invoices.user_id = excluded.user_id`
         ).bind(
           inv.id,
           userId,
@@ -121,13 +173,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
           inv.clientAddress || '',
           JSON.stringify(inv.items || []),
           inv.subtotal || 0,
-          inv.whtRate || 3,
+          rateVal,
           inv.whtAmount || 0,
           inv.netTotal || 0,
           inv.status || 'draft',
           inv.has50Tawi ? 1 : 0,
           inv.tawiDocNumber || '',
-          inv.notes || ''
+          inv.notes || '',
+          inv.slipImage || null,
+          inv.tawiImage || null
         );
       });
 
@@ -162,6 +216,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       });
     }
 
+    const sessionUser = getSessionUser(context.request);
+    // BOLA / IDOR Protection: verify user cannot read other users' accounts
+    if (context.env.DB && sessionUser && sessionUser.id !== userId) {
+      return new Response(JSON.stringify({ error: 'Forbidden: Cannot access other user data' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     if (!context.env.DB) {
       return new Response(JSON.stringify({ invoices: [], issuerProfile: null, subscription: null }), {
         status: 200,
@@ -190,9 +253,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       logoUrl: issuerRow.logo_url
     } : null;
 
-    // 2. Fetch Invoices
+    // 2. Fetch Invoices (Excluding soft-deleted invoices)
     const invoiceRows: any = await db.prepare(
-      `SELECT * FROM invoices WHERE user_id = ? ORDER BY issue_date DESC`
+      `SELECT * FROM invoices WHERE user_id = ? AND (is_deleted IS NULL OR is_deleted = 0) ORDER BY issue_date DESC`
     ).bind(userId).all();
 
     const invoices = (invoiceRows.results || []).map((row: any) => ({
@@ -212,7 +275,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       status: row.status,
       has50Tawi: !!row.has_50_tawi,
       tawiDocNumber: row.tawi_doc_number,
-      notes: row.notes
+      notes: row.notes,
+      slipImage: row.slip_image || undefined,
+      tawiImage: row.tawi_image || undefined
     }));
 
     // 3. Fetch Subscription

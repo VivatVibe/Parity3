@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS issuer_profiles (
 );
 
 CREATE TABLE IF NOT EXISTS invoices (
-  id TEXT PRIMARY KEY,
+  id TEXT NOT NULL,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   invoice_number TEXT NOT NULL,
   issue_date TEXT NOT NULL,
@@ -55,9 +55,14 @@ CREATE TABLE IF NOT EXISTS invoices (
   has_50_tawi INTEGER DEFAULT 0,
   tawi_doc_number TEXT,
   notes TEXT,
+  slip_image TEXT,
+  tawi_image TEXT,
+  is_deleted INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_invoices_user_id ON invoices(user_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(issue_date);
+CREATE INDEX IF NOT EXISTS idx_invoices_deleted ON invoices(user_id, is_deleted);

@@ -41,6 +41,7 @@ export function loadSubscription(): SubscriptionState {
       if (!isNaN(expTime) && expTime < Date.now()) {
         const expiredSub: SubscriptionState = {
           ...parsed,
+          tier: 'free',
           status: 'expired'
         };
         saveSubscription(expiredSub);
@@ -77,17 +78,28 @@ export function saveUser(user: UserAccount | null): void {
 export function getInvoicesThisMonth(invoices: Invoice[]): Invoice[] {
   const now = new Date();
   const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  return invoices.filter(inv => inv.issueDate && inv.issueDate.startsWith(yearMonth));
+  return invoices.filter(inv => inv.status !== 'cancelled' && inv.issueDate && inv.issueDate.startsWith(yearMonth));
 }
 
-export function checkInvoiceLimit(invoices: Invoice[], tier: SubscriptionTier): {
+export function isSubscriptionPro(sub: SubscriptionState | SubscriptionTier): boolean {
+  if (typeof sub === 'string') return sub === 'pro';
+  if (!sub || sub.tier !== 'pro') return false;
+  if (sub.status !== 'active') return false;
+  if (sub.expiresAt) {
+    const expTime = new Date(sub.expiresAt).getTime();
+    if (!isNaN(expTime) && expTime < Date.now()) return false;
+  }
+  return true;
+}
+
+export function checkInvoiceLimit(invoices: Invoice[], tierOrSub: SubscriptionTier | SubscriptionState): {
   allowed: boolean;
   count: number;
   limit: number;
   remaining: number;
   isPro: boolean;
 } {
-  const isPro = tier === 'pro';
+  const isPro = isSubscriptionPro(tierOrSub);
   const monthInvoices = getInvoicesThisMonth(invoices);
   const count = monthInvoices.length;
   const limit = FREE_MONTHLY_INVOICE_LIMIT;
@@ -102,14 +114,14 @@ export function checkInvoiceLimit(invoices: Invoice[], tier: SubscriptionTier): 
   };
 }
 
-export function canUseCustomLogo(tier: SubscriptionTier): boolean {
-  return tier === 'pro';
+export function canUseCustomLogo(tierOrSub: SubscriptionTier | SubscriptionState): boolean {
+  return isSubscriptionPro(tierOrSub);
 }
 
-export function canUseAdvancedDeductions(tier: SubscriptionTier): boolean {
-  return tier === 'pro';
+export function canUseAdvancedDeductions(tierOrSub: SubscriptionTier | SubscriptionState): boolean {
+  return isSubscriptionPro(tierOrSub);
 }
 
-export function canUseOverdueReminders(tier: SubscriptionTier): boolean {
-  return tier === 'pro';
+export function canUseOverdueReminders(tierOrSub: SubscriptionTier | SubscriptionState): boolean {
+  return isSubscriptionPro(tierOrSub);
 }

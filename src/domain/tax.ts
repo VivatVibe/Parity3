@@ -39,16 +39,18 @@ export const TAX_CATEGORIES: Record<TaxCategory, TaxCategoryMeta> = {
 export const WHT_RATE = 0.03; // 3%
 
 export function roundCurrency(val: number): number {
-  return Math.round(val * 100) / 100;
+  return Math.round((val + Number.EPSILON) * 100) / 100;
 }
 
 export function calculateBilling(subtotal: number, whtRate = WHT_RATE) {
+  // Normalize rate: accept either fraction (0.03) or whole percentage (3)
+  const normalizedRate = whtRate > 1 ? whtRate / 100 : (whtRate || WHT_RATE);
   const roundedSubtotal = roundCurrency(subtotal);
-  const whtAmount = roundCurrency(roundedSubtotal * whtRate);
+  const whtAmount = roundCurrency(roundedSubtotal * normalizedRate);
   const netTotal = roundCurrency(roundedSubtotal - whtAmount);
   return {
     subtotal: roundedSubtotal,
-    whtRate,
+    whtRate: normalizedRate,
     whtAmount,
     netTotal
   };

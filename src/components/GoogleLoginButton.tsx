@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { UserAccount, SubscriptionState } from '../domain/subscription';
+import { UserAccount, SubscriptionState, isSubscriptionPro } from '../domain/subscription';
 import { LogOut, RefreshCw, Sparkles } from 'lucide-react';
 
 interface GoogleLoginButtonProps {
@@ -162,7 +162,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
             <span className="text-xs font-medium text-slate-700 max-w-[100px] sm:max-w-[120px] truncate">
               {user.name}
             </span>
-            {subscription.tier === 'pro' && (
+            {isSubscriptionPro(subscription) && (
               <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200">
                 <Sparkles className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
                 PRO
@@ -207,17 +207,17 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
       {/* Official Google GIS Button Container */}
-      <div ref={googleBtnRef} className="h-9 flex items-center" />
+      <div ref={googleBtnRef} className={gisRendered ? "h-9 flex items-center" : "hidden"} />
 
       {/* Fallback button if GIS iframe is not active or for quick demo */}
       {!gisRendered && (
         <button
           onClick={handleDemoLogin}
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg shadow-2xs transition-all hover:border-slate-400 cursor-pointer shrink-0"
+          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg shadow-2xs transition-all hover:border-slate-400 cursor-pointer shrink-0"
         >
-          <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" viewBox="0 0 24 24">
             <path
               fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -236,7 +236,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
             />
           </svg>
           <span className="hidden sm:inline">เข้าสู่ระบบ Google</span>
-          <span className="sm:hidden text-[11px]">เข้าสู่ระบบ</span>
+          <span className="sm:hidden text-[10px] font-medium">เข้าสู่ระบบ</span>
         </button>
       )}
     </div>

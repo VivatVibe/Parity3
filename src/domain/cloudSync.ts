@@ -20,7 +20,8 @@ export interface CloudDataResponse {
 export async function uploadToCloud(
   user: UserAccount,
   invoices: Invoice[],
-  issuerProfile: IssuerProfile
+  issuerProfile: IssuerProfile,
+  deletedInvoiceIds?: string[]
 ): Promise<SyncResult> {
   if (!navigator.onLine) {
     return { success: false, offline: true, error: 'อุปกรณ์กำลังออฟไลน์ ข้อมูลถูกบันทึกไว้ในเครื่องเรียบร้อยแล้ว' };
@@ -33,7 +34,8 @@ export async function uploadToCloud(
       body: JSON.stringify({
         userId: user.id,
         issuerProfile,
-        invoices
+        invoices,
+        deletedInvoiceIds: deletedInvoiceIds || []
       })
     });
 

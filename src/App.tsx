@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Invoice, IssuerProfile, loadInvoices, saveInvoices, loadIssuer, saveIssuer } from './domain/storage';
+import {
+  Invoice,
+  IssuerProfile,
+  loadInvoices,
+  saveInvoices,
+  loadIssuer,
+  saveIssuer,
+  loadDeletedInvoiceIds,
+  addDeletedInvoiceId,
+  clearDeletedInvoiceIds
+} from './domain/storage';
 import {
   SubscriptionState,
   UserAccount,
@@ -7,7 +17,8 @@ import {
   saveSubscription,
   loadUser,
   saveUser,
-  checkInvoiceLimit
+  checkInvoiceLimit,
+  isSubscriptionPro
 } from './domain/subscription';
 import { uploadToCloud, downloadFromCloud } from './domain/cloudSync';
 import { InvoiceList } from './components/InvoiceList';
@@ -78,8 +89,12 @@ export default function App() {
     if (!user) return;
     setIsSyncing(true);
     try {
-      const result = await uploadToCloud(user, invoices, issuer);
+      const pendingDeleted = loadDeletedInvoiceIds();
+      const result = await uploadToCloud(user, invoices, issuer, pendingDeleted);
       if (result.success) {
+        if (pendingDeleted.length > 0) {
+          clearDeletedInvoiceIds(pendingDeleted);
+        }
         // Also pull any remote updates
         const remote = await downloadFromCloud(user);
         if (remote.success) {
@@ -87,8 +102,16 @@ export default function App() {
             setSubscription(remote.subscription);
           }
           if (remote.invoices && remote.invoices.length > 0) {
-            setInvoices(remote.invoices);
-            saveInvoices(remote.invoices);
+            const merged = remote.invoices.map(rem => {
+              const local = invoices.find(loc => loc.id === rem.id);
+              return {
+                ...rem,
+                slipImage: rem.slipImage || local?.slipImage,
+                tawiImage: rem.tawiImage || local?.tawiImage
+              };
+            });
+            setInvoices(merged);
+            saveInvoices(merged);
           }
         }
       }
@@ -116,9 +139,17 @@ export default function App() {
           saveIssuer(remote.issuerProfile);
         }
         if (remote.invoices && remote.invoices.length > 0) {
-          setInvoices(remote.invoices);
-          saveInvoices(remote.invoices);
-          setSelectedInvoice(remote.invoices[0]);
+          const merged = remote.invoices.map(rem => {
+            const local = invoices.find(loc => loc.id === rem.id);
+            return {
+              ...rem,
+              slipImage: rem.slipImage || local?.slipImage,
+              tawiImage: rem.tawiImage || local?.tawiImage
+            };
+          });
+          setInvoices(merged);
+          saveInvoices(merged);
+          setSelectedInvoice(merged[0]);
         }
         if (remote.subscription) {
           setSubscription(remote.subscription);
@@ -188,12 +219,17 @@ export default function App() {
       const updated = invoices.filter(inv => inv.id !== id);
       setInvoices(updated);
       saveInvoices(updated);
+      addDeletedInvoiceId(id);
       if (selectedInvoice && selectedInvoice.id === id) {
         setSelectedInvoice(updated[0] || null);
       }
 
       if (user) {
-        uploadToCloud(user, updated, issuer).catch(() => {});
+        uploadToCloud(user, updated, issuer, [id]).then(res => {
+          if (res.success) {
+            clearDeletedInvoiceIds([id]);
+          }
+        }).catch(() => {});
       }
     }
   };
@@ -238,8 +274,8 @@ export default function App() {
     );
   }
 
-  const isPro = subscription.tier === 'pro';
-  const limitInfo = checkInvoiceLimit(invoices, subscription.tier);
+  const isPro = isSubscriptionPro(subscription);
+  const limitInfo = checkInvoiceLimit(invoices, subscription);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-['Sarabun',sans-serif]">

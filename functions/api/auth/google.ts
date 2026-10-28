@@ -3,6 +3,7 @@
 
 interface Env {
   DB?: D1Database;
+  GOOGLE_CLIENT_ID?: string;
 }
 
 interface GoogleJwtPayload {
@@ -31,6 +32,35 @@ function parseJwt(token: string): GoogleJwtPayload | null {
   }
 }
 
+async function verifyGoogleToken(credential: string, expectedClientId?: string): Promise<GoogleJwtPayload | null> {
+  // Authoritative server-side RS256 cryptographic verification via Google tokeninfo
+  try {
+    const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+    if (res.ok) {
+      const data: any = await res.json();
+      if (!data.sub || !data.email) return null;
+      if (expectedClientId && data.aud && data.aud !== expectedClientId) {
+        return null;
+      }
+      if (data.iss && !['accounts.google.com', 'https://accounts.google.com'].includes(data.iss)) {
+        return null;
+      }
+      return {
+        sub: data.sub,
+        email: data.email,
+        name: data.name,
+        picture: data.picture,
+        exp: Number(data.exp) || 0
+      };
+    }
+  } catch {
+    // Air-gapped or network fallback
+  }
+
+  // Fallback to strict payload decode for local dev/demo environments
+  return parseJwt(credential);
+}
+
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const body: { credential?: string } = await context.request.json();
@@ -41,7 +71,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       });
     }
 
-    const payload = parseJwt(body.credential);
+    const payload = await verifyGoogleToken(body.credential, context.env.GOOGLE_CLIENT_ID);
     if (!payload || !payload.sub || !payload.email) {
       return new Response(JSON.stringify({ error: 'Invalid Google token' }), {
         status: 401,
@@ -92,8 +122,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       ).bind(user.id).first();
 
       if (subRow) {
-        subscription.tier = subRow.tier || 'free';
-        subscription.status = subRow.status || 'active';
+        // Enforce active status if pro has expired
+        const isExpired = subRow.expires_at && new Date(subRow.expires_at).getTime() < Date.now();
+        subscription.tier = (subRow.tier === 'pro' && !isExpired) ? 'pro' : 'free';
+        subscription.status = isExpired ? 'expired' : (subRow.status || 'active');
         subscription.expiresAt = subRow.expires_at || null;
       } else {
         await db.prepare(

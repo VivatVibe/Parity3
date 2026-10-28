@@ -47,6 +47,42 @@ export interface IssuerProfile {
 const STORAGE_INVOICES_KEY = 'thai_freelancer_invoices';
 const STORAGE_ISSUER_KEY = 'thai_freelancer_issuer';
 const STORAGE_DRAFT_KEY = 'thai_freelancer_invoice_draft';
+const STORAGE_DELETED_INVOICES_KEY = 'thai_freelancer_deleted_invoice_ids';
+
+export function loadDeletedInvoiceIds(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_DELETED_INVOICES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addDeletedInvoiceId(id: string): void {
+  try {
+    const ids = loadDeletedInvoiceIds();
+    if (!ids.includes(id)) {
+      ids.push(id);
+      localStorage.setItem(STORAGE_DELETED_INVOICES_KEY, JSON.stringify(ids));
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function clearDeletedInvoiceIds(syncedIds?: string[]): void {
+  try {
+    if (!syncedIds) {
+      localStorage.removeItem(STORAGE_DELETED_INVOICES_KEY);
+    } else {
+      const ids = loadDeletedInvoiceIds();
+      const remaining = ids.filter(id => !syncedIds.includes(id));
+      localStorage.setItem(STORAGE_DELETED_INVOICES_KEY, JSON.stringify(remaining));
+    }
+  } catch {
+    // ignore
+  }
+}
 
 export interface KnownClient {
   clientName: string;
