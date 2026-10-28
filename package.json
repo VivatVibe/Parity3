@@ -24,6 +24,8 @@
     "wrangler": "^4.153.0"
   },
   "dependencies": {
+    "html2canvas-pro": "^2.5.0",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.62.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

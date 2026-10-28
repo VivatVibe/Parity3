@@ -5,7 +5,8 @@ import { generatePromptPayQrDataUrl } from '../domain/promptpay';
 import { thaiBahtText } from '../utils/thaiBaht';
 import { formatLineInvoiceMessage, encodeInvoiceToShareUrl } from '../utils/shareInvoice';
 import { SignatureBlock } from './SignatureBlock';
-import { X, Printer, Eye, MessageCircle, Copy, Check, Share2, Info } from 'lucide-react';
+import { exportElementToPdf } from '../utils/exportPdf';
+import { X, Printer, Eye, MessageCircle, Copy, Check, Share2, Info, Download, Loader2 } from 'lucide-react';
 
 interface Props {
   invoice: Invoice;
@@ -18,6 +19,7 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
   const [viewAttachment, setViewAttachment] = useState<string | null>(null);
   const [copiedLine, setCopiedLine] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const categoryMeta = TAX_CATEGORIES[invoice.category];
 
   useEffect(() => {
@@ -50,6 +52,16 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const filename = `${invoice.invoiceNumber || 'invoice'}.pdf`;
+      await exportElementToPdf('printable-invoice', { filename });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   return (
@@ -104,14 +116,36 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
               <span className="hidden sm:inline">เปิดแอป LINE</span>
             </button>
 
-            {/* Print / PDF button */}
+            {/* Direct 1-Click PDF Download button */}
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              data-testid="download-pdf-btn"
+              className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-75 rounded-lg text-xs font-semibold text-white transition cursor-pointer shadow-xs"
+              title="ดาวน์โหลดเอกสารเป็นไฟล์ PDF ลงในเครื่องทันที"
+            >
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>กำลังสร้าง PDF...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>ดาวน์โหลด PDF</span>
+                </>
+              )}
+            </button>
+
+            {/* Print / System Dialog button */}
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-semibold text-white transition cursor-pointer shadow-xs"
-              title="พิมพ์เอกสาร หรือ บันทึกเป็นไฟล์ PDF"
+              data-testid="print-invoice-btn"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium transition cursor-pointer"
+              title="สั่งพิมพ์ออกเครื่องพิมพ์ หรือเลือกเครื่องพิมพ์ของระบบ"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>พิมพ์ / บันทึก PDF</span>
+              <span className="hidden sm:inline">พิมพ์เอกสาร</span>
             </button>
 
             <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
@@ -124,9 +158,9 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
         <div className="no-print bg-indigo-950/90 text-indigo-200 px-4 sm:px-6 py-1.5 text-[11px] flex items-center justify-between border-b border-indigo-900/50">
           <span className="flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            💡 ในหน้าต่างสั่งพิมพ์ เลือกปลายทางเป็น <strong className="text-white font-semibold">"บันทึกเป็น PDF (Save as PDF)"</strong> เพื่อเซฟไฟล์ส่งลูกค้า
+            💡 คลิกปุ่ม <strong className="text-white font-semibold">"ดาวน์โหลด PDF"</strong> เพื่อเซฟไฟล์ลงเครื่องทันที หรือกด <strong className="text-white font-semibold">"พิมพ์เอกสาร"</strong> เพื่อส่งออกเครื่องพิมพ์
           </span>
-          <span className="text-slate-400 text-[10px] hidden md:inline">จัดสเกลพอดีหน้ากระดาษ A4</span>
+          <span className="text-slate-400 text-[10px] hidden md:inline">ความละเอียดสูง พร้อมสแกน PromptPay</span>
         </div>
 
         {/* Printable Invoice Page */}

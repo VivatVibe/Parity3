@@ -4,7 +4,8 @@ import { TAX_CATEGORIES } from '../domain/tax';
 import { generatePromptPayQrDataUrl } from '../domain/promptpay';
 import { thaiBahtText } from '../utils/thaiBaht';
 import { SignatureBlock } from './SignatureBlock';
-import { Printer, Copy, Check, ShieldCheck, ArrowLeft, Share2 } from 'lucide-react';
+import { exportElementToPdf } from '../utils/exportPdf';
+import { Printer, Copy, Check, ShieldCheck, ArrowLeft, Share2, Download, Loader2 } from 'lucide-react';
 
 interface Props {
   invoice: Invoice;
@@ -16,6 +17,7 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
   const [qrUrl, setQrUrl] = useState<string>('');
   const [copiedBank, setCopiedBank] = useState(false);
   const [copiedPromptPay, setCopiedPromptPay] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
     if (issuer.promptPayId) {
@@ -40,6 +42,16 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
     window.print();
   };
 
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const filename = `${invoice.invoiceNumber || 'invoice'}.pdf`;
+      await exportElementToPdf('printable-invoice', { filename });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100/90 py-6 sm:py-10 px-4 font-['Sarabun',sans-serif]">
       {/* Top Banner Actions (Hidden in Print) */}
@@ -49,7 +61,7 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
           <div className="font-bold text-slate-900 text-sm font-heading">{issuer.name}</div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {onBackToApp && (
             <button
               onClick={onBackToApp}
@@ -60,10 +72,30 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
           )}
 
           <button
-            onClick={handlePrint}
-            className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-75 text-white rounded-xl text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-xs"
+            title="ดาวน์โหลดเอกสารเป็นไฟล์ PDF ลงในเครื่องทันที"
           >
-            <Printer className="w-3.5 h-3.5" /> พิมพ์หรือบันทึก PDF
+            {isGeneratingPdf ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>กำลังสร้าง PDF...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>ดาวน์โหลด PDF</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handlePrint}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-medium transition cursor-pointer flex items-center gap-1.5"
+            title="สั่งพิมพ์ออกเครื่องพิมพ์"
+          >
+            <Printer className="w-3.5 h-3.5" /> พิมพ์เอกสาร
           </button>
         </div>
       </div>
