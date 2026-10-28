@@ -1,6 +1,6 @@
 import React from 'react';
 import { Invoice } from '../domain/storage';
-import { aggregatePnd90, TaxCategory } from '../domain/tax';
+import { aggregatePnd90, estimatePnd90Tax, TaxCategory } from '../domain/tax';
 import { downloadPnd90Csv } from '../utils/exportCsv';
 import {
   Calculator,
@@ -21,6 +21,7 @@ interface Props {
 
 export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
   const summary = aggregatePnd90(invoices);
+  const taxEstimate = estimatePnd90Tax(summary);
   const netEarnings = summary.totalGrossIncome - summary.totalWhtCredit;
   const activeInvoicesCount = invoices.filter(i => i.status !== 'cancelled').length;
   
@@ -154,6 +155,102 @@ export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
           </div>
         </div>
 
+      </div>
+
+      {/* Tile 3: PND 90 Tax Estimation & Refund Simulator */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+              <Calculator className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 font-heading">
+                ประมาณการภาษีเงินได้ ภ.ง.ด. 90 & ยอดขอคืนเงิน (Simulation)
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                คำนวณตามเกณฑ์อัตราก้าวหน้า หักค่าใช้จ่ายเหมาตามกฎหมาย และหักลดหย่อนส่วนตัว 60,000 บาท
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-medium border border-slate-200/80">
+              อัตราภาษีเฉลี่ย: <strong className="font-mono">{taxEstimate.effectiveTaxRate}%</strong>
+            </span>
+          </div>
+        </div>
+
+        {/* Calculation Flow Summary */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-xs">
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div className="text-slate-500 text-[11px]">เงินได้พึงประเมินรวม</div>
+            <div className="font-bold text-slate-900 font-mono-numbers text-sm mt-0.5">
+              ฿{taxEstimate.totalGrossIncome.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div className="text-slate-500 text-[11px]">หักค่าใช้จ่ายเหมา</div>
+            <div className="font-bold text-slate-700 font-mono-numbers text-sm mt-0.5">
+              -฿{taxEstimate.totalExpenses.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div className="text-slate-500 text-[11px]">หักลดหย่อนส่วนตัว</div>
+            <div className="font-bold text-slate-700 font-mono-numbers text-sm mt-0.5">
+              -฿{taxEstimate.personalAllowance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+
+          <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-100">
+            <div className="text-indigo-800 text-[11px] font-medium">เงินได้สุทธิประเมิน</div>
+            <div className="font-bold text-indigo-950 font-mono-numbers text-sm mt-0.5">
+              ฿{taxEstimate.netTaxableIncome.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+        </div>
+
+        {/* Final Tax vs 3% WHT Settlement Banner */}
+        <div className={`mt-4 p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+          taxEstimate.isRefund
+            ? 'bg-linear-to-r from-emerald-50 via-teal-50 to-emerald-50 border-emerald-200 text-emerald-950'
+            : taxEstimate.balance > 0
+            ? 'bg-linear-to-r from-amber-50 via-orange-50 to-amber-50 border-amber-200 text-amber-950'
+            : 'bg-slate-50 border-slate-200 text-slate-900'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              taxEstimate.isRefund ? 'bg-emerald-600 text-white' : taxEstimate.balance > 0 ? 'bg-amber-600 text-white' : 'bg-slate-700 text-white'
+            }`}>
+              {taxEstimate.isRefund ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+            </div>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider">
+                {taxEstimate.isRefund
+                  ? '🎉 สิทธิ์ขอคืนเงินภาษีสุทธิ (Estimated Tax Refund)'
+                  : taxEstimate.balance > 0
+                  ? '⚠️ ประมาณการภาษีที่ต้องชำระเพิ่ม (Estimated Tax Payable)'
+                  : '✓ ไม่มียอดภาษีต้องชำระเพิ่ม'}
+              </div>
+              <p className="text-[11px] opacity-80 mt-0.5">
+                ภาษีที่ต้องเสียตามเกณฑ์: ฿{taxEstimate.finalCalculatedTax.toLocaleString('th-TH', { minimumFractionDigits: 2 })} | หัก ณ ที่จ่าย 3% สะสมแล้ว: ฿{taxEstimate.whtCredit.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+
+          <div className="text-left sm:text-right shrink-0">
+            <div className={`text-2xl font-bold font-mono-numbers ${
+              taxEstimate.isRefund ? 'text-emerald-700' : taxEstimate.balance > 0 ? 'text-amber-800' : 'text-slate-800'
+            }`}>
+              {taxEstimate.isRefund ? '+' : taxEstimate.balance > 0 ? '-' : ''}฿{Math.abs(taxEstimate.balance).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+            </div>
+            <div className="text-[10px] font-semibold opacity-75">
+              {taxEstimate.isRefund ? 'สามารถยื่นขอรับเงินคืนจากสรรพากรได้' : 'แนะนำเตรียมสำรองเงินสดไว้'}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Bento Grid: 3 Income Category Cards */}
