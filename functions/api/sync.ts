@@ -7,11 +7,11 @@ interface Env {
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
-    const authHeader = context.request.headers.get('Authorization') || '';
     const body: {
       userId: string;
       invoices?: any[];
       issuer?: any;
+      issuerProfile?: any;
     } = await context.request.json();
 
     if (!body.userId) {
@@ -35,10 +35,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const db = context.env.DB;
     const userId = body.userId;
+    const iss = body.issuerProfile || body.issuer;
+
+    // Ensure user record exists for Foreign Key integrity
+    await db.prepare(
+      `INSERT INTO users (id, email, name, updated_at)
+       VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(id) DO NOTHING`
+    ).bind(userId, `${userId}@sync.local`, iss?.name || 'User').run();
 
     // 1. Sync Issuer Profile
-    if (body.issuer) {
-      const iss = body.issuer;
+    if (iss) {
       await db.prepare(
         `INSERT INTO issuer_profiles (
           user_id, name, tax_id, address, phone, promptpay_id, 
@@ -156,7 +163,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     if (!context.env.DB) {
-      return new Response(JSON.stringify({ invoices: [], issuer: null }), {
+      return new Response(JSON.stringify({ invoices: [], issuerProfile: null, subscription: null }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -164,12 +171,26 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const db = context.env.DB;
 
-    // Fetch Issuer
+    // 1. Fetch Issuer
     const issuerRow: any = await db.prepare(
       `SELECT * FROM issuer_profiles WHERE user_id = ?`
     ).bind(userId).first();
 
-    // Fetch Invoices
+    const formattedIssuer = issuerRow ? {
+      name: issuerRow.name,
+      taxId: issuerRow.tax_id,
+      address: issuerRow.address,
+      phone: issuerRow.phone,
+      promptPayId: issuerRow.promptpay_id,
+      bankName: issuerRow.bank_name,
+      bankAccount: issuerRow.bank_account,
+      bankAccountName: issuerRow.bank_account_name,
+      signatureMode: issuerRow.signature_mode,
+      signatureDataUrl: issuerRow.signature_data_url,
+      logoUrl: issuerRow.logo_url
+    } : null;
+
+    // 2. Fetch Invoices
     const invoiceRows: any = await db.prepare(
       `SELECT * FROM invoices WHERE user_id = ? ORDER BY issue_date DESC`
     ).bind(userId).all();
@@ -194,22 +215,23 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       notes: row.notes
     }));
 
+    // 3. Fetch Subscription
+    const subRow: any = await db.prepare(
+      `SELECT tier, status, expires_at FROM subscriptions WHERE user_id = ?`
+    ).bind(userId).first();
+
+    const subscription = subRow ? {
+      tier: subRow.tier,
+      status: subRow.status,
+      expiresAt: subRow.expires_at
+    } : null;
+
     return new Response(JSON.stringify({
       success: true,
-      issuer: issuerRow ? {
-        name: issuerRow.name,
-        taxId: issuerRow.tax_id,
-        address: issuerRow.address,
-        phone: issuerRow.phone,
-        promptPayId: issuerRow.promptpay_id,
-        bankName: issuerRow.bank_name,
-        bankAccount: issuerRow.bank_account,
-        bankAccountName: issuerRow.bank_account_name,
-        signatureMode: issuerRow.signature_mode,
-        signatureDataUrl: issuerRow.signature_data_url,
-        logoUrl: issuerRow.logo_url
-      } : null,
-      invoices
+      issuerProfile: formattedIssuer,
+      issuer: formattedIssuer,
+      invoices,
+      subscription
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

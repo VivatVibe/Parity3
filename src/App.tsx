@@ -24,7 +24,18 @@ import { decodeInvoiceFromShareParam } from './utils/shareInvoice';
 import { FileText, PieChart, User, PlusCircle, Sparkles, Home, Zap } from 'lucide-react';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState<'app' | 'landing'>('app');
+  // Determine initial view mode: show landing page by default to new visitors
+  const determineInitialView = (): 'app' | 'landing' => {
+    if (typeof window === 'undefined') return 'landing';
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view')) return 'app'; // share link opens invoice
+    if (params.get('page') === 'app') return 'app';
+    if (params.get('page') === 'landing') return 'landing';
+    if (loadUser()) return 'app'; // logged in users go straight to app
+    return 'landing'; // default to commercial landing page
+  };
+
+  const [viewMode, setViewMode] = useState<'app' | 'landing'>(determineInitialView);
   const [activeTab, setActiveTab] = useState<'invoices' | 'tax' | 'profile'>('invoices');
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [issuer, setIssuer] = useState<IssuerProfile>(loadIssuer());
@@ -51,17 +62,17 @@ export default function App() {
       }
     }
 
-    // Check if landing page was explicitly requested
-    if (urlParams.get('page') === 'landing') {
-      setViewMode('landing');
-    }
-
     const loaded = loadInvoices();
     setInvoices(loaded);
     if (loaded.length > 0) {
       setSelectedInvoice(loaded[0]);
     }
   }, []);
+
+  const handleEnterApp = () => {
+    setViewMode('app');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleCloudSync = async () => {
     if (!user) return;
@@ -213,7 +224,7 @@ export default function App() {
     return (
       <>
         <LandingPage
-          onEnterApp={() => setViewMode('app')}
+          onEnterApp={handleEnterApp}
           onOpenUpgradeModal={() => setShowUpgradeModal(true)}
         />
         <ProUpgradeModal
@@ -306,11 +317,11 @@ export default function App() {
             {/* Switch to Landing Page */}
             <button
               onClick={() => setViewMode('landing')}
-              className="hidden lg:flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition"
-              title="ดูหน้าหลักแนะนำระบบ"
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+              title="ดูหน้าหลักแนะนำระบบและราคา"
             >
-              <Home className="w-3.5 h-3.5" />
-              <span>หน้าแนะนำ</span>
+              <Home className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden sm:inline">หน้าแรก</span>
             </button>
 
             {/* Google Login / Account Info */}

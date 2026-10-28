@@ -37,8 +37,8 @@ export const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
 
-  // Merchant promptpay number for pro tier subscription
-  const ADMIN_PROMPTPAY = '0812345678';
+  // Merchant promptpay number for pro tier subscription (configurable via env)
+  const ADMIN_PROMPTPAY = (import.meta as any).env?.VITE_ADMIN_PROMPTPAY || '0812345678';
   const price = billingCycle === 'monthly' ? PRO_MONTHLY_PRICE_THB : PRO_YEARLY_PRICE_THB;
 
   useEffect(() => {

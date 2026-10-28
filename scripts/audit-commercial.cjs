@@ -17,16 +17,16 @@ async function runCommercialAudit() {
   try {
     const page = await browser.newPage();
 
-    // 1. Audit Landing Page (Desktop)
-    console.log('Step 1: Testing Landing Page on Desktop (1440x900)...');
+    // 1. Audit Landing Page (Desktop) - Verify it is default at root /
+    console.log('Step 1: Testing Landing Page at root (/) on Desktop (1440x900)...');
     await page.setViewport({ width: 1440, height: 900 });
-    await page.goto(`${TARGET_URL}/?page=landing`, { waitUntil: 'networkidle0' });
+    await page.goto(TARGET_URL, { waitUntil: 'networkidle0' });
 
     const heroText = await page.evaluate(() => document.body.innerText);
     if (!heroText.includes('ออกใบวางบิลมืออาชีพ') || !heroText.includes('หัก ณ ที่จ่าย 3%')) {
-      throw new Error('Landing page missing key hero copy');
+      throw new Error('Root page must default to Landing page for new visitors');
     }
-    console.log('✔ Hero section verified.');
+    console.log('✔ Root page defaults to Landing page successfully.');
 
     // Test live simulator calculation
     console.log('Step 2: Testing Live Simulator with 50,000 THB calculation...');
@@ -116,22 +116,40 @@ async function runCommercialAudit() {
     await page.screenshot({ path: upgradeSuccessPath });
     console.log(`✔ Saved screenshot: ${upgradeSuccessPath}`);
 
-    // 4. Audit Main App with Pro Tier & Google Auth Button
-    console.log('Step 5: Verifying Main App Header & Pro Badge...');
+    // 4. Audit Main App Transition & Google Auth Button
+    console.log('Step 5: Testing transition from Landing Page into App Dashboard...');
     await page.goto(TARGET_URL, { waitUntil: 'networkidle0' });
-    await new Promise(r => setTimeout(r, 500));
+    await page.evaluate(() => {
+      const enterBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('เข้าใช้งานระบบ') || b.textContent.includes('ทดลองออกบิล'));
+      if (enterBtn) enterBtn.click();
+    });
+    await new Promise(r => setTimeout(r, 600));
 
     const appHeaderCheck = await page.evaluate(() => {
       const text = document.body.innerText;
       const hasGoogleAuth = text.includes('Google') || Boolean(document.querySelector('button svg'));
-      const hasProBadge = text.includes('PRO');
-      return { hasGoogleAuth, hasProBadge };
+      const hasInvoiceTabs = text.includes('รายการวางบิล') && text.includes('สรุปภาษี ภ.ง.ด. 90');
+      const hasHomeBtn = text.includes('หน้าแรก');
+      return { hasGoogleAuth, hasInvoiceTabs, hasHomeBtn };
     });
 
-    if (!appHeaderCheck.hasGoogleAuth) {
-      throw new Error('Google Login / Auth button not present in header');
+    if (!appHeaderCheck.hasInvoiceTabs) {
+      throw new Error('Clicking Enter App failed to transition into the dashboard');
     }
-    console.log('✔ Main App header contains Google Login and Pro status.');
+    console.log('✔ Transition into App Dashboard verified. All tabs and "หน้าแรก" return button present.');
+
+    // Click "หน้าแรก" to verify return to Landing Page
+    await page.evaluate(() => {
+      const homeBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('หน้าแรก'));
+      if (homeBtn) homeBtn.click();
+    });
+    await new Promise(r => setTimeout(r, 400));
+
+    const returnCheck = await page.evaluate(() => document.body.innerText.includes('ออกใบวางบิลมืออาชีพ'));
+    if (!returnCheck) {
+      throw new Error('Clicking "หน้าแรก" did not return to Landing Page');
+    }
+    console.log('✔ Clicking "หน้าแรก" returns to Landing Page verified.');
 
     const appHeaderPath = path.join(__dirname, '../screenshots/commercial-app-header.png');
     await page.screenshot({ path: appHeaderPath });
