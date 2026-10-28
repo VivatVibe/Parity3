@@ -204,7 +204,7 @@ assert.strictEqual(summary.byCategory['40_6'].grossIncome, 30000);
 assert.strictEqual(summary.byCategory['40_8'].grossIncome, 20000);
 console.log('✓ aggregatePnd90 multi-stream categorization passed.');
 
-// Check 5: CSV Generator with UTF-8 BOM
+// Check 5: CSV Generator with UTF-8 BOM & P.N.D. 90 Tax Breakdown
 function escapeCsvCell(cell) {
   if (cell === undefined || cell === null) return '""';
   const str = String(cell);
@@ -217,7 +217,35 @@ function escapeCsvCell(cell) {
 const sampleCsvRow = ['INV-001', 'บริษัท ทดสอบ, จำกัด', 45000].map(escapeCsvCell).join(',');
 assert.strictEqual(sampleCsvRow, '"INV-001","บริษัท ทดสอบ, จำกัด","45000"');
 assert('\uFEFF'.charCodeAt(0) === 0xFEFF, 'BOM marker is valid UTF-8 BOM');
-console.log('✓ CSV generator and UTF-8 BOM escaping passed.');
+
+// Test CSV Generation with Tax Deduction Breakdown & Refund Status
+function testGeneratePnd90CsvFormat(invoices, deductions) {
+  const summary = aggregatePnd90(invoices);
+  const taxEstimate = estimatePnd90Tax(summary, deductions);
+  const rows = [];
+  rows.push(['รายงานสรุปข้อมูลภาษีเงินได้บุคคลธรรมดา (ภ.ง.ด. 90) และภาษีหัก ณ ที่จ่าย 3%']);
+  rows.push(['--- 2. สรุปการคำนวณภาษีเงินได้สุทธิ และยอดขอคืนภาษี (ภ.ง.ด. 90) ---']);
+  rows.push(['1. เงินได้พึงประเมินรวมทั้งปี', taxEstimate.totalGrossIncome.toFixed(2)]);
+  rows.push(['4. เงินได้สุทธิที่ต้องนำไปคำนวณภาษี (Net Taxable Income)', taxEstimate.netTaxableIncome.toFixed(2)]);
+  if (taxEstimate.isRefund) {
+    rows.push(['>>> ผลสรุป: สิทธิ์ขอคืนเงินภาษีสุทธิ (Tax Refund) <<<', `+${taxEstimate.balance.toFixed(2)} บาท`]);
+  }
+  return '\uFEFF' + rows.map(r => r.map(escapeCsvCell).join(',')).join('\r\n');
+}
+
+const sampleCsvOutput = testGeneratePnd90CsvFormat(testInvoices, {
+  personal: 60000,
+  socialSecurity: 9000,
+  healthInsurance: 0,
+  lifeInsurance: 0,
+  retirementFunds: 0,
+  otherDeductions: 0
+});
+assert(sampleCsvOutput.startsWith('\uFEFF'), 'CSV must start with UTF-8 BOM byte order mark');
+assert(sampleCsvOutput.includes('รายงานสรุปข้อมูลภาษีเงินได้บุคคลธรรมดา'), 'CSV must contain title');
+assert(sampleCsvOutput.includes('สรุปการคำนวณภาษีเงินได้สุทธิ และยอดขอคืนภาษี'), 'CSV must contain tax computation header');
+assert(sampleCsvOutput.includes('เงินได้สุทธิที่ต้องนำไปคำนวณภาษี'), 'CSV must contain net taxable income row');
+console.log('✓ CSV generator, UTF-8 BOM, and PND 90 tax calculation breakdown passed.');
 
 // Check 6: Backup Payload Schema Validation
 function validateBackupPayload(raw) {

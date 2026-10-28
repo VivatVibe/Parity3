@@ -106,8 +106,9 @@ export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
               <ShieldCheck className="w-4 h-4 text-emerald-400" /> เครดิตภาษีใช้ขอคืนหรือลดหย่อนตอนยื่น ภ.ง.ด. 90
             </span>
             <button
-              onClick={() => downloadPnd90Csv(invoices)}
+              onClick={() => downloadPnd90Csv(invoices, deductions)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg transition text-xs font-semibold cursor-pointer border border-white/15"
+              title="ส่งออกรายงานสรุปภาษี ภ.ง.ด. 90 และการหักลดหย่อนเป็นไฟล์ Excel / CSV"
             >
               <Download className="w-3.5 h-3.5" /> Export Excel
             </button>
@@ -199,6 +200,15 @@ export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
             <span className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-medium border border-slate-200/80">
               อัตราภาษีเฉลี่ย: <strong className="font-mono">{taxEstimate.effectiveTaxRate}%</strong>
             </span>
+            <button
+              type="button"
+              onClick={() => downloadPnd90Csv(invoices, deductions)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition text-xs font-semibold cursor-pointer border border-indigo-200/80 active:scale-95"
+              title="ส่งออกรายงานสรุปภาษี ภ.ง.ด. 90 และการหักลดหย่อนเป็นไฟล์ Excel / CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
+            </button>
           </div>
         </div>
 
