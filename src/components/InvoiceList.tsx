@@ -7,6 +7,7 @@ import { generatePromptPayQrDataUrl } from '../domain/promptpay';
 import { thaiBahtText } from '../utils/thaiBaht';
 import { formatLineInvoiceMessage, encodeInvoiceToShareUrl } from '../utils/shareInvoice';
 import { SignatureBlock } from './SignatureBlock';
+import { exportElementToPdf } from '../utils/exportPdf';
 import {
   Plus,
   CheckCircle2,
@@ -14,6 +15,7 @@ import {
   Trash2,
   Printer,
   Download,
+  Loader2,
   Paperclip,
   Search,
   MessageCircle,
@@ -53,8 +55,20 @@ export const InvoiceList: React.FC<Props> = ({
   const [attachingInvoice, setAttachingInvoice] = useState<Invoice | null>(null);
   const [liveQrUrl, setLiveQrUrl] = useState<string>('');
   const [copiedLine, setCopiedLine] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   const currentPreview = selectedInvoice || invoices[0] || null;
+
+  const handleDownloadPdf = async () => {
+    if (!currentPreview) return;
+    setIsDownloadingPdf(true);
+    try {
+      const filename = `${currentPreview.invoiceNumber || 'invoice'}.pdf`;
+      await exportElementToPdf('desktop-invoice-card', { filename });
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   const handleCopyLine = () => {
     if (!currentPreview) return;
@@ -316,7 +330,7 @@ export const InvoiceList: React.FC<Props> = ({
         {/* Right Column: Live Sticky Luxury Printable Invoice Canvas (7 cols on lg) */}
         <div className="hidden lg:block lg:col-span-7 sticky top-20">
           {currentPreview ? (
-            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.08)] p-8 text-slate-800 text-xs relative overflow-hidden">
+            <div id="desktop-invoice-card" className="bg-white rounded-2xl border border-slate-200/90 shadow-[0_15px_40px_-10px_rgba(15,23,42,0.08)] p-8 text-slate-800 text-xs relative overflow-hidden">
               
               {/* Subtle Ambient Background Watermark */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/40 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
@@ -484,20 +498,44 @@ export const InvoiceList: React.FC<Props> = ({
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onOpenPrint) {
-                      onOpenPrint(currentPreview);
-                    } else {
-                      window.print();
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-md active:scale-95"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>พิมพ์ / บันทึก PDF (A4 เป๊ะ)</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    disabled={isDownloadingPdf}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-75 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-md active:scale-95"
+                    title="ดาวน์โหลดไฟล์ PDF คุณภาพสูงลงเครื่องทันที"
+                  >
+                    {isDownloadingPdf ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>กำลังสร้าง PDF...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>ดาวน์โหลด PDF</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    data-testid="open-preview-modal-btn"
+                    onClick={() => {
+                      if (onOpenPrint) {
+                        onOpenPrint(currentPreview);
+                      } else {
+                        window.print();
+                      }
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold transition cursor-pointer shadow-xs active:scale-95"
+                    title="เปิดหน้าต่างขยายตัวอย่างเต็มจอ หรือสั่งพิมพ์"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>ตัวอย่างเต็มจอ / พิมพ์</span>
+                  </button>
+                </div>
               </div>
 
             </div>

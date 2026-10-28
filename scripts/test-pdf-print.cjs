@@ -19,10 +19,15 @@ async function testPdfExport() {
   await page.setViewport({ width: 1440, height: 900 });
   await page.goto(TARGET_URL, { waitUntil: 'networkidle0' });
 
-  // Click on "สั่งพิมพ์ / PDF" button to open modal
+  // Click on print / preview button to open modal
   await page.evaluate(() => {
+    const testidBtn = document.querySelector('[data-testid="open-preview-modal-btn"]');
+    if (testidBtn) {
+      testidBtn.click();
+      return;
+    }
     const btns = Array.from(document.querySelectorAll('button'));
-    const printBtn = btns.find(b => b.textContent.includes('สั่งพิมพ์ / PDF') || b.textContent.includes('พิมพ์ / บันทึก PDF'));
+    const printBtn = btns.find(b => b.textContent.includes('พิมพ์') || b.textContent.includes('ตัวอย่างเต็มจอ'));
     if (printBtn) printBtn.click();
   });
   await new Promise(r => setTimeout(r, 600));
