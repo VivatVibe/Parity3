@@ -34,8 +34,10 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
     (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
     '407408718192.apps.googleusercontent.com';
 
+  const isRealGoogleConfigured = Boolean(googleClientId && googleClientId.includes('-'));
+
   useEffect(() => {
-    if (user) return;
+    if (user || !isRealGoogleConfigured) return;
 
     const setupGoogleIdentity = () => {
       if (window.google?.accounts?.id && googleBtnRef.current) {
@@ -72,7 +74,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [user, googleClientId, gisRendered]);
+  }, [user, googleClientId, gisRendered, isRealGoogleConfigured]);
 
   const handleGoogleCredentialResponse = async (response: any) => {
     if (!response?.credential) return;
@@ -206,16 +208,37 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
     );
   }
 
-  return (
-    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-      {/* Official Google GIS Button Container */}
-      <div ref={googleBtnRef} className={gisRendered ? "h-9 flex items-center" : "hidden"} />
+  const handleGoogleClick = () => {
+    if (!isRealGoogleConfigured) {
+      alert('ยังไม่ได้ระบุ Google OAuth Client ID จริงในระบบ (VITE_GOOGLE_CLIENT_ID)\nระบบจะเข้าสู่ระบบด้วยบัญชีทดลอง (Demo Account) ให้คุณทันที');
+      handleDemoLogin();
+    }
+  };
 
-      {/* Fallback button if GIS iframe is not active or for quick demo */}
-      {!gisRendered && (
+  return (
+    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+      {/* Demo Account Button: Always visible alongside Google */}
+      <button
+        onClick={handleDemoLogin}
+        className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-semibold bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-900 border border-amber-200/90 rounded-lg shadow-2xs transition-all hover:border-amber-300 cursor-pointer shrink-0"
+        title="เข้าสู่ระบบทดลอง (Demo) ทันทีโดยไม่ต้องใช้ Google Account"
+      >
+        <Sparkles className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
+        <span className="hidden sm:inline">บัญชีทดลอง</span>
+        <span className="sm:hidden text-[10px]">Demo</span>
+      </button>
+
+      {/* Official Google GIS Button Container (if real client ID is configured and GIS loaded) */}
+      {isRealGoogleConfigured && (
+        <div ref={googleBtnRef} className={gisRendered ? "h-9 flex items-center" : "hidden"} />
+      )}
+
+      {/* Google Button (Fallback or when GIS is not active / unconfigured) */}
+      {(!isRealGoogleConfigured || !gisRendered) && (
         <button
-          onClick={handleDemoLogin}
-          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg shadow-2xs transition-all hover:border-slate-400 cursor-pointer shrink-0"
+          onClick={handleGoogleClick}
+          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 text-xs font-medium bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg shadow-2xs transition-all hover:border-slate-400 cursor-pointer shrink-0"
+          title="เข้าสู่ระบบด้วย Google Account"
         >
           <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" viewBox="0 0 24 24">
             <path
@@ -235,8 +258,8 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          <span className="hidden sm:inline">เข้าสู่ระบบ Google</span>
-          <span className="sm:hidden text-[10px] font-medium">เข้าสู่ระบบ</span>
+          <span className="hidden sm:inline">Google</span>
+          <span className="sm:hidden text-[10px] font-medium">Google</span>
         </button>
       )}
     </div>
