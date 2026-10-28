@@ -1,4 +1,4 @@
-import { TaxCategory, calculateBilling } from './tax';
+import { TaxCategory, calculateBilling, TaxDeductionProfile, DEFAULT_DEDUCTION_PROFILE } from './tax';
 
 export interface InvoiceItem {
   id: string;
@@ -239,4 +239,27 @@ export function loadIssuer(): IssuerProfile {
 
 export function saveIssuer(issuer: IssuerProfile): void {
   localStorage.setItem(STORAGE_ISSUER_KEY, JSON.stringify(issuer));
+}
+
+const STORAGE_DEDUCTIONS_KEY = 'thai_freelancer_deductions';
+
+export function loadDeductionProfile(): TaxDeductionProfile {
+  try {
+    const raw = localStorage.getItem(STORAGE_DEDUCTIONS_KEY);
+    if (!raw) return DEFAULT_DEDUCTION_PROFILE;
+    return {
+      ...DEFAULT_DEDUCTION_PROFILE,
+      ...JSON.parse(raw)
+    };
+  } catch {
+    return DEFAULT_DEDUCTION_PROFILE;
+  }
+}
+
+export function saveDeductionProfile(profile: TaxDeductionProfile): void {
+  try {
+    localStorage.setItem(STORAGE_DEDUCTIONS_KEY, JSON.stringify(profile));
+  } catch {
+    // Ignore storage limits
+  }
 }

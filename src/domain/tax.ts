@@ -202,10 +202,77 @@ export function calculateProgressiveTax(netTaxableIncome: number): number {
   return roundCurrency(totalTax);
 }
 
+export interface TaxDeductionProfile {
+  personal: number; // default 60,000 (สิทธิ์ลดหย่อนส่วนตัว)
+  socialSecurity: number; // ประกันสังคม ม.33 (max 9k), ม.39 (max 5,184), ม.40 (max 3,600)
+  lifeInsurance: number; // เบี้ยประกันชีวิตทั่วไป (max 100k)
+  healthInsurance: number; // เบี้ยประกันสุขภาพตนเอง (max 25k, รวมกับชีวิตไม่เกิน 100k)
+  retirementFunds: number; // กองทุน Thai ESG / RMF / SSF / กอช. (max 30% เงินได้ ไม่เกิน 500k)
+  otherDeductions: number; // บุตร/บิดามารดา/บริจาค/อื่นๆ
+}
+
+export const DEFAULT_DEDUCTION_PROFILE: TaxDeductionProfile = {
+  personal: 60000,
+  socialSecurity: 0,
+  lifeInsurance: 0,
+  healthInsurance: 0,
+  retirementFunds: 0,
+  otherDeductions: 0
+};
+
+export function calculateTotalDeductions(
+  deductions: Partial<TaxDeductionProfile>,
+  grossIncome: number
+): {
+  totalDeductions: number;
+  breakdown: {
+    personal: number;
+    socialSecurity: number;
+    insurance: number;
+    retirementFunds: number;
+    other: number;
+  };
+} {
+  const personal = Math.max(0, deductions.personal ?? 60000);
+  const socialSecurity = Math.min(Math.max(0, deductions.socialSecurity || 0), 9000);
+  
+  const healthInsurance = Math.min(Math.max(0, deductions.healthInsurance || 0), 25000);
+  const lifeInsurance = Math.min(Math.max(0, deductions.lifeInsurance || 0), 100000);
+  // Combined life + health insurance cannot exceed 100,000 THB
+  const insurance = Math.min(healthInsurance + lifeInsurance, 100000);
+
+  // Retirement / Thai ESG funds: max 30% of gross income up to 500,000 THB
+  const maxRetirement = Math.min(roundCurrency(grossIncome * 0.3), 500000);
+  const retirementFunds = Math.min(Math.max(0, deductions.retirementFunds || 0), maxRetirement);
+
+  const other = Math.max(0, deductions.otherDeductions || 0);
+
+  const totalDeductions = roundCurrency(personal + socialSecurity + insurance + retirementFunds + other);
+
+  return {
+    totalDeductions,
+    breakdown: {
+      personal,
+      socialSecurity,
+      insurance,
+      retirementFunds,
+      other
+    }
+  };
+}
+
 export interface Pnd90TaxEstimate {
   totalGrossIncome: number;
   totalExpenses: number;
   personalAllowance: number;
+  totalDeductions: number;
+  deductionsBreakdown: {
+    personal: number;
+    socialSecurity: number;
+    insurance: number;
+    retirementFunds: number;
+    other: number;
+  };
   netTaxableIncome: number;
   progressiveTax: number;
   flatTax05Percent: number; // มาตรา 48(2) วิธีเหมา 0.5% (ถ้าเงินได้ >= 120,000 และภาษี > 5,000)
@@ -219,15 +286,22 @@ export interface Pnd90TaxEstimate {
 
 export function estimatePnd90Tax(
   summary: Pnd90Summary,
-  customPersonalAllowance = PERSONAL_ALLOWANCE
+  deductionsInput: Partial<TaxDeductionProfile> | number = DEFAULT_DEDUCTION_PROFILE
 ): Pnd90TaxEstimate {
   const cat40_2Expense = calculateStandardExpense('40_2', summary.byCategory['40_2'].grossIncome);
   const cat40_6Expense = calculateStandardExpense('40_6', summary.byCategory['40_6'].grossIncome);
   const cat40_8Expense = calculateStandardExpense('40_8', summary.byCategory['40_8'].grossIncome);
   const totalExpenses = roundCurrency(cat40_2Expense + cat40_6Expense + cat40_8Expense);
 
-  const personalAllowance = Math.max(0, customPersonalAllowance);
-  const netTaxableIncome = Math.max(0, roundCurrency(summary.totalGrossIncome - totalExpenses - personalAllowance));
+  const deductionProfile: Partial<TaxDeductionProfile> =
+    typeof deductionsInput === 'number'
+      ? { personal: deductionsInput }
+      : (deductionsInput || DEFAULT_DEDUCTION_PROFILE);
+
+  const { totalDeductions, breakdown } = calculateTotalDeductions(deductionProfile, summary.totalGrossIncome);
+  const personalAllowance = breakdown.personal;
+
+  const netTaxableIncome = Math.max(0, roundCurrency(summary.totalGrossIncome - totalExpenses - totalDeductions));
 
   const progressiveTax = calculateProgressiveTax(netTaxableIncome);
 
@@ -254,6 +328,8 @@ export function estimatePnd90Tax(
     totalGrossIncome: summary.totalGrossIncome,
     totalExpenses,
     personalAllowance,
+    totalDeductions,
+    deductionsBreakdown: breakdown,
     netTaxableIncome,
     progressiveTax,
     flatTax05Percent,

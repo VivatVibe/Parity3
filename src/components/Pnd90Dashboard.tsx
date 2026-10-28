@@ -1,6 +1,6 @@
-import React from 'react';
-import { Invoice } from '../domain/storage';
-import { aggregatePnd90, estimatePnd90Tax, TaxCategory } from '../domain/tax';
+import React, { useState } from 'react';
+import { Invoice, loadDeductionProfile, saveDeductionProfile } from '../domain/storage';
+import { aggregatePnd90, estimatePnd90Tax, TaxCategory, TaxDeductionProfile, DEFAULT_DEDUCTION_PROFILE } from '../domain/tax';
 import { downloadPnd90Csv } from '../utils/exportCsv';
 import {
   Calculator,
@@ -11,6 +11,10 @@ import {
   ArrowUpRight,
   Download,
   TrendingUp,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
   Receipt,
   FileText
 } from 'lucide-react';
@@ -20,10 +24,27 @@ interface Props {
 }
 
 export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
+  const [deductions, setDeductions] = useState<TaxDeductionProfile>(loadDeductionProfile);
+  const [showDeductionEditor, setShowDeductionEditor] = useState<boolean>(false);
+
   const summary = aggregatePnd90(invoices);
-  const taxEstimate = estimatePnd90Tax(summary);
+  const taxEstimate = estimatePnd90Tax(summary, deductions);
   const netEarnings = summary.totalGrossIncome - summary.totalWhtCredit;
   const activeInvoicesCount = invoices.filter(i => i.status !== 'cancelled').length;
+
+  const handleDeductionChange = (field: keyof TaxDeductionProfile, value: number) => {
+    const updated = {
+      ...deductions,
+      [field]: Math.max(0, value)
+    };
+    setDeductions(updated);
+    saveDeductionProfile(updated);
+  };
+
+  const handleResetDeductions = () => {
+    setDeductions(DEFAULT_DEDUCTION_PROFILE);
+    saveDeductionProfile(DEFAULT_DEDUCTION_PROFILE);
+  };
   
   // Calculate percentage of 50-tawi documents collected
   const total50TawiNeeded = summary.received50TawiTotal + summary.pending50TawiTotal;
@@ -198,9 +219,9 @@ export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
           </div>
 
           <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <div className="text-slate-500 text-[11px]">หักลดหย่อนส่วนตัว</div>
+            <div className="text-slate-500 text-[11px]">หักลดหย่อนภาษีรวม</div>
             <div className="font-bold text-slate-700 font-mono-numbers text-sm mt-0.5">
-              -฿{taxEstimate.personalAllowance.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+              -฿{taxEstimate.totalDeductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
 
@@ -210,6 +231,145 @@ export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
               ฿{taxEstimate.netTaxableIncome.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
           </div>
+        </div>
+
+        {/* Deduction Customizer Toggle Bar */}
+        <div className="mt-4 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setShowDeductionEditor(!showDeductionEditor)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100/80 px-3 py-1.5 rounded-lg border border-indigo-200/80 transition cursor-pointer"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+              <span>{showDeductionEditor ? 'ซ่อนการปรับแต่งค่าลดหย่อน' : 'ปรับแต่งค่าลดหย่อนภาษี (ประกันสังคม / ประกันสุขภาพ / กองทุน)'}</span>
+              {showDeductionEditor ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+
+            {showDeductionEditor && (
+              <button
+                type="button"
+                onClick={handleResetDeductions}
+                className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                title="รีเซ็ตค่าลดหย่อนเป็นค่าเริ่มต้น"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>รีเซ็ต</span>
+              </button>
+            )}
+          </div>
+
+          {/* Collapsible Deduction Form */}
+          {showDeductionEditor && (
+            <div className="mt-3 p-4 bg-slate-50/80 rounded-xl border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-in fade-in duration-150 text-xs">
+              <div>
+                <label className="text-[11px] font-medium text-slate-700 mb-1 flex items-center justify-between">
+                  <span>ประกันสังคม (ม.33/39/40)</span>
+                  <span className="text-[10px] text-slate-400">สูงสุด 9,000</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-2 text-slate-400 font-mono">฿</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="9000"
+                    step="100"
+                    value={deductions.socialSecurity || ''}
+                    onChange={(e) => handleDeductionChange('socialSecurity', parseFloat(e.target.value) || 0)}
+                    placeholder="เช่น 9000 หรือ 5184"
+                    className="w-full pl-7 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono-numbers"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-slate-700 mb-1 flex items-center justify-between">
+                  <span>เบี้ยประกันสุขภาพตนเอง</span>
+                  <span className="text-[10px] text-slate-400">สูงสุด 25,000</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-2 text-slate-400 font-mono">฿</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="25000"
+                    step="1000"
+                    value={deductions.healthInsurance || ''}
+                    onChange={(e) => handleDeductionChange('healthInsurance', parseFloat(e.target.value) || 0)}
+                    placeholder="เช่น 15000"
+                    className="w-full pl-7 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono-numbers"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-slate-700 mb-1 flex items-center justify-between">
+                  <span>เบี้ยประกันชีวิตทั่วไป</span>
+                  <span className="text-[10px] text-slate-400">รวมสุขภาพไม่เกิน 100k</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-2 text-slate-400 font-mono">฿</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100000"
+                    step="1000"
+                    value={deductions.lifeInsurance || ''}
+                    onChange={(e) => handleDeductionChange('lifeInsurance', parseFloat(e.target.value) || 0)}
+                    placeholder="เช่น 50000"
+                    className="w-full pl-7 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono-numbers"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-slate-700 mb-1 flex items-center justify-between">
+                  <span>กองทุน Thai ESG / RMF / SSF</span>
+                  <span className="text-[10px] text-slate-400">สูงสุด 30% ของเงินได้</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-2 text-slate-400 font-mono">฿</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="500000"
+                    step="5000"
+                    value={deductions.retirementFunds || ''}
+                    onChange={(e) => handleDeductionChange('retirementFunds', parseFloat(e.target.value) || 0)}
+                    placeholder="เช่น 50000"
+                    className="w-full pl-7 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono-numbers"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-medium text-slate-700 mb-1 flex items-center justify-between">
+                  <span>ลดหย่อนอื่นๆ (บุตร/พ่อแม่/บริจาค)</span>
+                  <span className="text-[10px] text-slate-400">ตามจริง</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-2 text-slate-400 font-mono">฿</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={deductions.otherDeductions || ''}
+                    onChange={(e) => handleDeductionChange('otherDeductions', parseFloat(e.target.value) || 0)}
+                    placeholder="เช่น 30000 (บุตร 1 คน)"
+                    className="w-full pl-7 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-mono-numbers"
+                  />
+                </div>
+              </div>
+
+              <div className="p-2.5 bg-indigo-50/50 rounded-lg border border-indigo-100 flex flex-col justify-center text-[11px] text-indigo-900">
+                <span className="font-semibold text-indigo-950">💡 ผลรวมลดหย่อนที่ใช้ได้จริง:</span>
+                <span className="font-bold text-sm text-indigo-700 font-mono-numbers mt-0.5">
+                  ฿{taxEstimate.totalDeductions.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                </span>
+                <span className="text-[10px] text-indigo-800/80 mt-0.5">(รวมสิทธิ์ส่วนตัว 60,000 บาทแล้ว)</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Final Tax vs 3% WHT Settlement Banner */}

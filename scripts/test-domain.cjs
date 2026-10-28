@@ -403,14 +403,33 @@ function calculateProgressiveTax(netTaxableIncome) {
   return roundCurrency(totalTax);
 }
 
-function estimatePnd90Tax(summary, customPersonalAllowance = 60000) {
+function calculateTotalDeductions(deductions, grossIncome) {
+  const personal = Math.max(0, deductions.personal ?? 60000);
+  const socialSecurity = Math.min(Math.max(0, deductions.socialSecurity || 0), 9000);
+  const healthInsurance = Math.min(Math.max(0, deductions.healthInsurance || 0), 25000);
+  const lifeInsurance = Math.min(Math.max(0, deductions.lifeInsurance || 0), 100000);
+  const insurance = Math.min(healthInsurance + lifeInsurance, 100000);
+  const maxRetirement = Math.min(roundCurrency(grossIncome * 0.3), 500000);
+  const retirementFunds = Math.min(Math.max(0, deductions.retirementFunds || 0), maxRetirement);
+  const other = Math.max(0, deductions.otherDeductions || 0);
+  const totalDeductions = roundCurrency(personal + socialSecurity + insurance + retirementFunds + other);
+  return { totalDeductions, breakdown: { personal, socialSecurity, insurance, retirementFunds, other } };
+}
+
+function estimatePnd90Tax(summary, deductionsInput = { personal: 60000 }) {
   const cat40_2Expense = calculateStandardExpense('40_2', summary.byCategory['40_2'].grossIncome);
   const cat40_6Expense = calculateStandardExpense('40_6', summary.byCategory['40_6'].grossIncome);
   const cat40_8Expense = calculateStandardExpense('40_8', summary.byCategory['40_8'].grossIncome);
   const totalExpenses = roundCurrency(cat40_2Expense + cat40_6Expense + cat40_8Expense);
 
-  const personalAllowance = Math.max(0, customPersonalAllowance);
-  const netTaxableIncome = Math.max(0, roundCurrency(summary.totalGrossIncome - totalExpenses - personalAllowance));
+  const deductionProfile = typeof deductionsInput === 'number'
+    ? { personal: deductionsInput }
+    : (deductionsInput || { personal: 60000 });
+
+  const { totalDeductions, breakdown } = calculateTotalDeductions(deductionProfile, summary.totalGrossIncome);
+  const personalAllowance = breakdown.personal;
+  const netTaxableIncome = Math.max(0, roundCurrency(summary.totalGrossIncome - totalExpenses - totalDeductions));
+
   const progressiveTax = calculateProgressiveTax(netTaxableIncome);
 
   let flatTax05Percent = 0;
@@ -434,6 +453,8 @@ function estimatePnd90Tax(summary, customPersonalAllowance = 60000) {
     totalGrossIncome: summary.totalGrossIncome,
     totalExpenses,
     personalAllowance,
+    totalDeductions,
+    deductionsBreakdown: breakdown,
     netTaxableIncome,
     progressiveTax,
     flatTax05Percent,
@@ -491,6 +512,49 @@ assert.strictEqual(payableResult.netTaxableIncome, 840000, '1M - 100k expense - 
 assert.strictEqual(payableResult.finalCalculatedTax, 83000, 'Tax on 840k net income is 83,000 THB');
 assert.strictEqual(payableResult.isRefund, false, 'Freelancer must pay additional tax');
 assert.strictEqual(payableResult.balance, 53000, 'Additional tax to pay is 83,000 - 30,000 = 53,000 THB');
+// 5. Verify Custom Deductions & Statutory Caps (Social Security, Insurance, Thai ESG)
+const dedCapTest = calculateTotalDeductions({
+  personal: 60000,
+  socialSecurity: 15000, // exceeds 9k cap
+  healthInsurance: 30000, // exceeds 25k cap
+  lifeInsurance: 90000, // 25k health + 90k life = 115k -> exceeds 100k cap
+  retirementFunds: 400000, // on 1M income, 30% is 300k -> exceeds 300k cap
+  otherDeductions: 30000
+}, 1000000);
+
+assert.strictEqual(dedCapTest.breakdown.socialSecurity, 9000, 'Social Security must be capped at 9,000 THB');
+assert.strictEqual(dedCapTest.breakdown.insurance, 100000, 'Life + health insurance must be capped at 100,000 THB');
+assert.strictEqual(dedCapTest.breakdown.retirementFunds, 300000, 'Thai ESG / Retirement funds must be capped at 30% of income (300,000 THB)');
+assert.strictEqual(dedCapTest.totalDeductions, 499000, 'Total deductions: 60k + 9k + 100k + 300k + 30k = 499,000 THB');
+
+// 6. Verify Tax Optimization with Extra Deductions (Convert Payable to Refund)
+const optSummary = {
+  totalGrossIncome: 800000,
+  totalWhtCredit: 24000, // 3% of 800k
+  byCategory: {
+    '40_2': { grossIncome: 800000 },
+    '40_6': { grossIncome: 0 },
+    '40_8': { grossIncome: 0 }
+  }
+};
+// Without deductions (only 60k personal): Tax is 48,500, balance = +24,500 payable
+const baseResult = estimatePnd90Tax(optSummary);
+assert.strictEqual(baseResult.isRefund, false, 'Base case requires additional tax payment');
+assert.strictEqual(baseResult.finalCalculatedTax, 48500, 'Tax on 640k net income is 48,500 THB');
+
+// With optimized deductions: Social Security 9k, Health 25k, Life 50k, Thai ESG 100k
+const optResult = estimatePnd90Tax(optSummary, {
+  personal: 60000,
+  socialSecurity: 9000,
+  healthInsurance: 25000,
+  lifeInsurance: 50000,
+  retirementFunds: 100000
+});
+assert.strictEqual(optResult.totalDeductions, 244000, 'Total deductions: 60k + 9k + 75k + 100k = 244k');
+assert.strictEqual(optResult.netTaxableIncome, 456000, '800k - 100k expense - 244k deductions = 456k');
+assert.strictEqual(optResult.finalCalculatedTax, 23100, 'Tax drops from 48,500 to 23,100 THB');
+assert.strictEqual(optResult.isRefund, true, 'With deductions, freelancer now receives 900 THB refund!');
+assert.strictEqual(optResult.balance, -900, 'Refund balance is exact -900 THB');
 console.log('✓ Thai Revenue Department PND 90 Comprehensive Tax Calculation Engine passed.');
 
 console.log('\nAll domain verification tests passed successfully!');
