@@ -283,7 +283,7 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
             ) : (
               <>
                 <Download className="w-4 h-4 stroke-[2.5]" />
-                <span>📥 ดาวน์โหลด PDF (A4)</span>
+                <span>ดาวน์โหลด PDF (A4)</span>
               </>
             )}
           </button>

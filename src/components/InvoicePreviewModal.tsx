@@ -65,12 +65,10 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/70 backdrop-blur-xs p-2 sm:p-5 overflow-y-auto pb-28 sm:pb-5 font-['Sarabun',sans-serif] print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:overflow-visible">
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-2 sm:my-4 border border-slate-200 overflow-hidden print:static print:w-full print:max-w-none print:m-0 print:p-0 print:border-none print:shadow-none print:overflow-visible">
-        
-        {/* Sticky Floating Toolbar (Always accessible at top of modal) */}
-        <div className="no-print sticky top-0 z-30 flex items-center justify-between gap-2 px-3 sm:px-6 py-2.5 bg-slate-900/95 backdrop-blur-md text-white border-b border-slate-800 shadow-sm">
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/85 font-['Sarabun',sans-serif] print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:overflow-visible">
+      {/* 1. Modal Top Toolbar (Pinned at top, never scrolls) */}
+      <div className="no-print shrink-0 flex items-center justify-between gap-2 px-3 sm:px-6 py-2.5 bg-slate-900 text-white border-b border-slate-800 shadow-sm z-30">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <span className="text-xs font-semibold text-slate-300 truncate">เอกสาร {invoice.invoiceNumber}</span>
             
             {invoice.slipImage && (
@@ -171,17 +169,21 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
           </div>
         </div>
 
-        {/* Print guidance banner in preview mode (hidden in print) */}
-        <div className="no-print bg-indigo-950/90 text-indigo-200 px-3 sm:px-6 py-1.5 text-[11px] flex items-center justify-between border-b border-indigo-900/50">
-          <span className="flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <span>กดปุ่ม <strong className="text-white font-semibold">"ดาวน์โหลด PDF"</strong> เพื่อเซฟไฟล์ลงเครื่อง หรือกด <strong className="text-white font-semibold">"พิมพ์เอกสาร"</strong></span>
-          </span>
-          <span className="text-slate-400 text-[10px] hidden md:inline">จัดสเกลพอดีหน้ากระดาษ A4</span>
-        </div>
+      {/* Print guidance banner in preview mode (hidden in print) */}
+      <div className="no-print shrink-0 bg-indigo-950/90 text-indigo-200 px-3 sm:px-6 py-1.5 text-[11px] flex items-center justify-between border-b border-indigo-900/50">
+        <span className="flex items-center gap-1.5">
+          <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <span>กดปุ่ม <strong className="text-white font-semibold">"ดาวน์โหลด PDF"</strong> เพื่อเซฟไฟล์ลงเครื่อง หรือกด <strong className="text-white font-semibold">"พิมพ์เอกสาร"</strong></span>
+        </span>
+        <span className="text-slate-400 text-[10px] hidden md:inline">จัดสเกลพอดีหน้ากระดาษ A4</span>
+      </div>
 
-        {/* Printable Invoice Page */}
-        <div id="printable-invoice" className="p-5 sm:p-7 text-slate-800 bg-white">
+      {/* 2. Middle Scrollable Document Area (Free scrolling, never obscured) */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 sm:p-6 pb-6 flex justify-center items-start print:overflow-visible print:p-0 print:m-0">
+        <div className="relative bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-3xl my-2 sm:my-4 border border-slate-200 overflow-hidden print:static print:w-full print:max-w-none print:m-0 print:p-0 print:border-none print:shadow-none print:overflow-visible">
+          
+          {/* Printable Invoice Page */}
+          <div id="printable-invoice" className="p-5 sm:p-7 text-slate-800 bg-white">
           <div className="invoice-body-top">
             {/* Header */}
             <div className="flex justify-between items-start pb-3.5 border-b-2 border-slate-900">
@@ -327,39 +329,17 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
             </div>
           </div>
         </div>
-
-        {/* Attachment Lightbox Modal */}
-        {viewAttachment && (
-          <div
-            className="no-print fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
-            onClick={() => setViewAttachment(null)}
-          >
-            <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
-              <button
-                onClick={() => setViewAttachment(null)}
-                className="absolute -top-10 right-0 text-white hover:text-slate-300 p-2 cursor-pointer"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              <img
-                src={viewAttachment}
-                alt="Attachment Document"
-                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-white"
-                onClick={e => e.stopPropagation()}
-              />
-            </div>
-          </div>
-        )}
       </div>
+    </div>
 
-      {/* Mobile-Only Persistent Floating Bottom Bar (Always directly at thumb reach on Android/iOS) */}
-      <div className="no-print sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 p-3 shadow-[0_-8px_30px_rgba(0,0,0,0.15)]">
+      {/* 3. Mobile Docked Bottom Action Bar (Cleanly docked below scrollable area, never overlaps content!) */}
+      <div className="no-print sm:hidden shrink-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom,0px))] shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-30">
         <div className="flex items-center gap-2 max-w-lg mx-auto">
           <button
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
             data-testid="mobile-sticky-download-pdf-btn"
-            className="flex-1 py-3 px-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-75 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2 active:scale-98"
+            className="flex-1 py-3 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-75 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
           >
             {isGeneratingPdf ? (
               <>
@@ -369,14 +349,14 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
             ) : (
               <>
                 <Download className="w-4 h-4 stroke-[2.5]" />
-                <span>📥 ดาวน์โหลด PDF (A4)</span>
+                <span>ดาวน์โหลด PDF (A4)</span>
               </>
             )}
           </button>
 
           <button
             onClick={handleOpenLineApp}
-            className="p-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 transition active:scale-95 shrink-0"
+            className="p-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 transition active:scale-95 shrink-0 cursor-pointer"
             title="ส่งต่อใน LINE"
           >
             <Share2 className="w-4 h-4" />
@@ -384,13 +364,36 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
 
           <button
             onClick={handlePrint}
-            className="p-3 bg-slate-100 text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-200 transition active:scale-95 shrink-0"
+            className="p-3 bg-slate-100 text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-200 transition active:scale-95 shrink-0 cursor-pointer"
             title="พิมพ์เอกสาร"
           >
             <Printer className="w-4 h-4" />
           </button>
         </div>
       </div>
+
+      {/* Attachment Lightbox Modal */}
+      {viewAttachment && (
+        <div
+          className="no-print fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setViewAttachment(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+            <button
+              onClick={() => setViewAttachment(null)}
+              className="absolute -top-10 right-0 text-white hover:text-slate-300 p-2 cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={viewAttachment}
+              alt="Attachment Document"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-white"
+              onClick={e => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
