@@ -10,15 +10,35 @@ function checkMigrationImmutability() {
 
   if (!hasHead) return;
 
-  // Check staged changes (pre-commit mode)
-  const stagedDiff = execSync('git diff --cached --name-status migrations', { encoding: 'utf8' }).trim();
+  let diffOutput = '';
+  const isCI = process.env.CI === 'true';
+
+  if (isCI) {
+    // In CI: Check committed changes between base and current commit
+    const baseRef = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'origin/main';
+    try {
+      execSync(`git rev-parse --verify ${baseRef}`, { stdio: 'ignore' });
+      diffOutput = execSync(`git diff --name-status ${baseRef}...HEAD migrations`, { encoding: 'utf8' }).trim();
+    } catch {
+      // If baseRef is not fetched, compare with previous commit if it exists
+      try {
+        execSync('git rev-parse --verify HEAD~1', { stdio: 'ignore' });
+        diffOutput = execSync('git diff --name-status HEAD~1..HEAD migrations', { encoding: 'utf8' }).trim();
+      } catch {
+        diffOutput = '';
+      }
+    }
+  } else {
+    // Local: Check staged changes (pre-commit mode)
+    diffOutput = execSync('git diff --cached --name-status migrations', { encoding: 'utf8' }).trim();
+  }
   
-  if (!stagedDiff) {
-    // Nothing staged in migrations/
+  if (!diffOutput) {
+    // Nothing modified in migrations/
     return;
   }
 
-  const lines = stagedDiff.split('\n').filter(Boolean);
+  const lines = diffOutput.split('\n').filter(Boolean);
   const violations = [];
 
   for (const line of lines) {
@@ -28,13 +48,7 @@ function checkMigrationImmutability() {
 
     // If the file was Modified (M), Deleted (D), or Renamed (R)
     if (status.startsWith('M') || status.startsWith('D') || status.startsWith('R')) {
-      // Confirm the file actually existed in HEAD
-      try {
-        execSync(`git cat-file -e "HEAD:${filePath}"`, { stdio: 'ignore' });
-        violations.push({ file: filePath, status });
-      } catch {
-        // Did not exist in HEAD, likely a newly staged file
-      }
+      violations.push({ file: filePath, status });
     }
   }
 
