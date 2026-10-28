@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const TARGET_URL = 'http://127.0.0.1:5173';
+const TARGET_URL = 'http://127.0.0.1:5173/?page=app';
 const SCREENSHOT_DIR = path.join(__dirname, '../screenshots');
 
 if (!fs.existsSync(SCREENSHOT_DIR)) {
@@ -23,11 +23,17 @@ async function runAudit() {
 
   // Helper to check horizontal overflow (bad responsive design tell)
   async function checkHorizontalOverflow(name) {
-    const overflow = await page.evaluate(() => {
-      return document.documentElement.scrollWidth > window.innerWidth;
+    const details = await page.evaluate(() => {
+      const over = Array.from(document.querySelectorAll('*'))
+        .filter(el => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.right > window.innerWidth + 1;
+        })
+        .map(el => `${el.tagName}.${el.className.toString().slice(0, 30)} (right=${el.getBoundingClientRect().right})`);
+      return { isOverflow: over.length > 0, details: over.slice(0, 3) };
     });
-    console.log(`[${name}] Horizontal scroll overflow: ${overflow ? 'FAIL (Content overflows screen)' : 'PASS (Fits viewport perfectly)'}`);
-    return !overflow;
+    console.log(`[${name}] Horizontal scroll overflow: ${details.isOverflow ? 'FAIL ' + JSON.stringify(details.details) : 'PASS (Fits viewport perfectly)'}`);
+    return !details.isOverflow;
   }
 
   // --- 1. MOBILE AUDIT (375x667 iPhone SE / standard phone) ---

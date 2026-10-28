@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const CHROME_PATH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const TARGET_URL = 'http://127.0.0.1:5173';
+const TARGET_URL = 'http://127.0.0.1:5173/?page=app';
 const OUTPUT_PDF = path.join(__dirname, '../screenshots/sample-invoice.pdf');
 
 async function testPdfExport() {

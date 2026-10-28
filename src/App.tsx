@@ -268,13 +268,13 @@ export default function App() {
                   </button>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="hidden lg:block text-[11px] text-slate-500">
                 ระบบออกบิลพร้อม PromptPay & สรุปภาษี ภ.ง.ด. 90 หัก ณ ที่จ่าย 3%
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Navigation Tabs (Desktop) */}
             <nav className="hidden md:flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
               <button
@@ -337,7 +337,7 @@ export default function App() {
             {/* New Invoice Button (Desktop) */}
             <button
               onClick={() => setShowCreateModal(true)}
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition shadow-xs cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition shadow-xs cursor-pointer"
             >
               <PlusCircle className="w-4 h-4 stroke-[2.5]" />
               <span>ออกบิลใหม่</span>
