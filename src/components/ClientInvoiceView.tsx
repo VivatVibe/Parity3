@@ -53,7 +53,7 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
   };
 
   return (
-    <div className="min-h-screen bg-slate-100/90 py-6 sm:py-10 px-4 font-['Sarabun',sans-serif]">
+    <div className="min-h-screen bg-slate-100/90 py-6 sm:py-10 pb-28 sm:pb-10 px-4 font-['Sarabun',sans-serif]">
       {/* Top Banner Actions (Hidden in Print) */}
       <div className="no-print max-w-3xl mx-auto mb-6 flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs">
         <div>
@@ -145,9 +145,9 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
             </div>
           </div>
 
-          {/* Line Items */}
-          <div className="py-3">
-            <table className="w-full text-left text-[11px] border-collapse">
+          {/* Line Items Table with Mobile Responsive Scrolling */}
+          <div className="py-3 overflow-x-auto -mx-1 sm:mx-0">
+            <table className="w-full text-left text-[11px] border-collapse min-w-[480px] sm:min-w-full print:min-w-0">
               <thead>
                 <tr className="border-y border-slate-900 bg-slate-50 text-slate-900 font-bold">
                   <th className="py-1.5 px-2.5 w-10 text-center">ลำดับ</th>
@@ -264,6 +264,37 @@ export const ClientInvoiceView: React.FC<Props> = ({ invoice, issuer, onBackToAp
               roleTitle="ผู้วางบิล / ผู้รับเงิน"
             />
           </div>
+        </div>
+      </div>
+
+      {/* Mobile-Only Persistent Floating Bottom Bar */}
+      <div className="no-print sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 p-3 shadow-[0_-8px_30px_rgba(0,0,0,0.15)]">
+        <div className="flex items-center gap-2 max-w-lg mx-auto">
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            className="flex-1 py-3 px-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-75 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2 active:scale-98"
+          >
+            {isGeneratingPdf ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>กำลังสร้างไฟล์ PDF...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 stroke-[2.5]" />
+                <span>📥 ดาวน์โหลด PDF (A4)</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handlePrint}
+            className="p-3 bg-slate-100 text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-200 transition active:scale-95 shrink-0"
+            title="พิมพ์เอกสาร"
+          >
+            <Printer className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>

@@ -32,7 +32,12 @@ import { LandingPage } from './components/LandingPage';
 import { GoogleLoginButton } from './components/GoogleLoginButton';
 import { ProUpgradeModal } from './components/ProUpgradeModal';
 import { decodeInvoiceFromShareParam } from './utils/shareInvoice';
-import { FileText, PieChart, User, PlusCircle, Sparkles, Home, Zap } from 'lucide-react';
+import { FileText, PieChart, User, PlusCircle, Sparkles, Home, Zap, Smartphone } from 'lucide-react';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 export default function App() {
   // Determine initial view mode: show landing page by default to new visitors
@@ -60,6 +65,29 @@ export default function App() {
   const [user, setUser] = useState<UserAccount | null>(loadUser());
   const [subscription, setSubscription] = useState<SubscriptionState>(loadSubscription());
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallPwa = async () => {
+    if (!deferredPrompt) return;
+    try {
+      await deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } catch {
+      // Ignore user abort or prompt rejection
+    }
+  };
 
   useEffect(() => {
     // Check if opened via share link ?view=...
@@ -310,42 +338,42 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             {/* Navigation Tabs (Desktop / Tablet Adaptive Pill) */}
-            <nav className="hidden md:flex items-center gap-0.5 sm:gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60">
+            <nav className="hidden md:flex items-center gap-0.5 sm:gap-1 bg-slate-100/80 p-0.5 sm:p-1 rounded-xl border border-slate-200/60">
               <button
                 onClick={() => setActiveTab('invoices')}
-                className={`flex items-center gap-1.5 px-2 sm:px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 lg:px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'invoices'
                     ? 'bg-white text-indigo-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <FileText className="w-4 h-4" />
-                <span>รายการวางบิล</span>
+                <FileText className="w-4 h-4 shrink-0" />
+                <span className="hidden xl:inline">รายการ</span><span>วางบิล</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('tax')}
-                className={`flex items-center gap-1.5 px-2 sm:px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 lg:px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'tax'
                     ? 'bg-white text-indigo-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <PieChart className="w-4 h-4" />
-                <span>สรุปภาษี ภ.ง.ด. 90</span>
+                <PieChart className="w-4 h-4 shrink-0" />
+                <span>สรุปภาษี</span><span className="hidden xl:inline"> ภ.ง.ด. 90</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('profile')}
-                className={`flex items-center gap-1.5 px-2 sm:px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 lg:px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
                   activeTab === 'profile'
                     ? 'bg-white text-indigo-700 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <User className="w-4 h-4" />
+                <User className="w-4 h-4 shrink-0" />
                 <span>โปรไฟล์</span>
               </button>
             </nav>
@@ -357,8 +385,20 @@ export default function App() {
               title="ดูหน้าหลักแนะนำระบบและราคา"
             >
               <Home className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span className="text-[11px] sm:text-xs">หน้าแรก</span>
+              <span className="hidden sm:inline text-[11px] sm:text-xs">หน้าแรก</span>
             </button>
+
+            {/* Install PWA Button (Visible when browser triggers beforeinstallprompt) */}
+            {deferredPrompt && (
+              <button
+                onClick={handleInstallPwa}
+                className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition shadow-2xs cursor-pointer animate-pulse"
+                title="ติดตั้งแอป Parity3 ลงมือถือ (WebAPK)"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="text-[11px] sm:text-xs font-medium">ติดตั้งแอป</span>
+              </button>
+            )}
 
             {/* Google Login / Account Info */}
             <GoogleLoginButton

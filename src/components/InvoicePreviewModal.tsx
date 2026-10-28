@@ -65,34 +65,34 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/70 backdrop-blur-xs p-2 sm:p-5 overflow-y-auto font-['Sarabun',sans-serif] print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:overflow-visible">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/70 backdrop-blur-xs p-2 sm:p-5 overflow-y-auto pb-28 sm:pb-5 font-['Sarabun',sans-serif] print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:overflow-visible">
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-2 sm:my-4 border border-slate-200 overflow-hidden print:static print:w-full print:max-w-none print:m-0 print:p-0 print:border-none print:shadow-none print:overflow-visible">
         
-        {/* Sticky Floating Toolbar (hidden in print, always visible at top of modal) */}
-        <div className="no-print sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2.5 px-4 sm:px-6 py-2.5 bg-slate-900/95 backdrop-blur-md text-white border-b border-slate-800 shadow-sm">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-slate-300">ตัวอย่างเอกสาร ({invoice.invoiceNumber})</span>
+        {/* Sticky Floating Toolbar (Always accessible at top of modal) */}
+        <div className="no-print sticky top-0 z-30 flex items-center justify-between gap-2 px-3 sm:px-6 py-2.5 bg-slate-900/95 backdrop-blur-md text-white border-b border-slate-800 shadow-sm">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="text-xs font-semibold text-slate-300 truncate">เอกสาร {invoice.invoiceNumber}</span>
             
             {invoice.slipImage && (
               <button
                 onClick={() => setViewAttachment(invoice.slipImage!)}
-                className="px-2 py-0.5 bg-emerald-600/80 hover:bg-emerald-500 rounded-md text-[10px] font-semibold text-white flex items-center gap-1 cursor-pointer transition"
+                className="px-2 py-0.5 bg-emerald-600/80 hover:bg-emerald-500 rounded-md text-[10px] font-semibold text-white flex items-center gap-1 cursor-pointer transition shrink-0"
               >
-                <Eye className="w-3 h-3" /> สลิปโอนเงิน
+                <Eye className="w-3 h-3" /> สลิป
               </button>
             )}
             {invoice.tawiImage && (
               <button
                 onClick={() => setViewAttachment(invoice.tawiImage!)}
-                className="px-2 py-0.5 bg-amber-600/80 hover:bg-amber-500 rounded-md text-[10px] font-semibold text-white flex items-center gap-1 cursor-pointer transition"
+                className="px-2 py-0.5 bg-amber-600/80 hover:bg-amber-500 rounded-md text-[10px] font-semibold text-white flex items-center gap-1 cursor-pointer transition shrink-0"
               >
-                <Eye className="w-3 h-3" /> ใบ 50 ทวิ
+                <Eye className="w-3 h-3" /> 50 ทวิ
               </button>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Copy LINE message button */}
+          {/* Desktop Toolbar Actions */}
+          <div className="hidden sm:flex items-center gap-2">
             <button
               onClick={handleCopyLine}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
@@ -106,22 +106,20 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
               <span>{copiedLine ? 'คัดลอกแล้ว!' : 'คัดลอกส่ง LINE'}</span>
             </button>
 
-            {/* Direct Open LINE button */}
             <button
               onClick={handleOpenLineApp}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition cursor-pointer"
               title="เปิดแอป LINE ทันที"
             >
               <Share2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">เปิดแอป LINE</span>
+              <span>เปิดแอป LINE</span>
             </button>
 
-            {/* Direct 1-Click PDF Download button */}
             <button
               onClick={handleDownloadPdf}
               disabled={isGeneratingPdf}
               data-testid="download-pdf-btn"
-              className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-75 rounded-lg text-xs font-semibold text-white transition cursor-pointer shadow-xs"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-75 rounded-lg text-xs font-semibold text-white transition cursor-pointer shadow-xs"
               title="ดาวน์โหลดเอกสารเป็นไฟล์ PDF ลงในเครื่องทันที"
             >
               {isGeneratingPdf ? (
@@ -137,7 +135,6 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
               )}
             </button>
 
-            {/* Print / System Dialog button */}
             <button
               onClick={handlePrint}
               data-testid="print-invoice-btn"
@@ -145,22 +142,42 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
               title="สั่งพิมพ์ออกเครื่องพิมพ์ หรือเลือกเครื่องพิมพ์ของระบบ"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">พิมพ์เอกสาร</span>
+              <span>พิมพ์เอกสาร</span>
             </button>
 
             <button onClick={onClose} className="text-slate-400 hover:text-white p-1 cursor-pointer">
               <X className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Mobile Top Header Actions */}
+          <div className="flex sm:hidden items-center gap-1.5 shrink-0">
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg text-xs font-bold shadow-xs active:scale-95"
+            >
+              {isGeneratingPdf ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+              )}
+              <span>โหลด PDF</span>
+            </button>
+
+            <button onClick={onClose} className="text-slate-400 hover:text-white p-1.5 cursor-pointer">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Print guidance banner in preview mode (hidden in print) */}
-        <div className="no-print bg-indigo-950/90 text-indigo-200 px-4 sm:px-6 py-1.5 text-[11px] flex items-center justify-between border-b border-indigo-900/50">
+        <div className="no-print bg-indigo-950/90 text-indigo-200 px-3 sm:px-6 py-1.5 text-[11px] flex items-center justify-between border-b border-indigo-900/50">
           <span className="flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            💡 คลิกปุ่ม <strong className="text-white font-semibold">"ดาวน์โหลด PDF"</strong> เพื่อเซฟไฟล์ลงเครื่องทันที หรือกด <strong className="text-white font-semibold">"พิมพ์เอกสาร"</strong> เพื่อส่งออกเครื่องพิมพ์
+            <span>กดปุ่ม <strong className="text-white font-semibold">"ดาวน์โหลด PDF"</strong> เพื่อเซฟไฟล์ลงเครื่อง หรือกด <strong className="text-white font-semibold">"พิมพ์เอกสาร"</strong></span>
           </span>
-          <span className="text-slate-400 text-[10px] hidden md:inline">ความละเอียดสูง พร้อมสแกน PromptPay</span>
+          <span className="text-slate-400 text-[10px] hidden md:inline">จัดสเกลพอดีหน้ากระดาษ A4</span>
         </div>
 
         {/* Printable Invoice Page */}
@@ -208,9 +225,9 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
               </div>
             </div>
 
-            {/* Line Items Table */}
-            <div className="py-3">
-              <table className="w-full text-left text-[11px] border-collapse">
+            {/* Line Items Table with Mobile Responsive Scrolling */}
+            <div className="py-3 overflow-x-auto -mx-1 sm:mx-0">
+              <table className="w-full text-left text-[11px] border-collapse min-w-[480px] sm:min-w-full print:min-w-0">
                 <thead>
                   <tr className="border-y border-slate-900 bg-slate-50 text-slate-900 font-bold">
                     <th className="py-1.5 px-2.5 w-10 text-center">ลำดับ</th>
@@ -333,6 +350,46 @@ export const InvoicePreviewModal: React.FC<Props> = ({ invoice, issuer, onClose 
             </div>
           </div>
         )}
+      </div>
+
+      {/* Mobile-Only Persistent Floating Bottom Bar (Always directly at thumb reach on Android/iOS) */}
+      <div className="no-print sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 p-3 shadow-[0_-8px_30px_rgba(0,0,0,0.15)]">
+        <div className="flex items-center gap-2 max-w-lg mx-auto">
+          <button
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            data-testid="mobile-sticky-download-pdf-btn"
+            className="flex-1 py-3 px-4 bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-600 hover:from-indigo-500 hover:to-blue-500 disabled:opacity-75 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2 active:scale-98"
+          >
+            {isGeneratingPdf ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>กำลังสร้างไฟล์ PDF...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 stroke-[2.5]" />
+                <span>📥 ดาวน์โหลด PDF (A4)</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={handleOpenLineApp}
+            className="p-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 transition active:scale-95 shrink-0"
+            title="ส่งต่อใน LINE"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={handlePrint}
+            className="p-3 bg-slate-100 text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-200 transition active:scale-95 shrink-0"
+            title="พิมพ์เอกสาร"
+          >
+            <Printer className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   );
