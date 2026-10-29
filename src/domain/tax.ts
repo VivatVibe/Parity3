@@ -341,3 +341,44 @@ export function estimatePnd90Tax(
     effectiveTaxRate
   };
 }
+
+export interface ClientPendingTawiGroup {
+  clientName: string;
+  clientTaxId?: string;
+  invoices: Invoice[];
+  totalGross: number;
+  totalWht: number;
+}
+
+/**
+ * Groups all unpaid/unreceived 50 Tawi invoices by employer/client.
+ * Sorted by total withholding tax descending so biggest tax credits appear first.
+ */
+export function groupPending50TawiByClient(invoices: Invoice[]): ClientPendingTawiGroup[] {
+  const groupsMap = new Map<string, ClientPendingTawiGroup>();
+
+  for (const inv of invoices) {
+    if (inv.status === 'cancelled' || inv.has50Tawi) continue;
+    const key = (inv.clientName || 'ไม่ระบุชื่อผู้ว่าจ้าง').trim();
+
+    let existing = groupsMap.get(key);
+    if (!existing) {
+      existing = {
+        clientName: key,
+        clientTaxId: inv.clientTaxId,
+        invoices: [],
+        totalGross: 0,
+        totalWht: 0
+      };
+      groupsMap.set(key, existing);
+    }
+    existing.invoices.push(inv);
+    existing.totalGross = roundCurrency(existing.totalGross + inv.subtotal);
+    existing.totalWht = roundCurrency(existing.totalWht + inv.whtAmount);
+    if (!existing.clientTaxId && inv.clientTaxId) {
+      existing.clientTaxId = inv.clientTaxId;
+    }
+  }
+
+  return Array.from(groupsMap.values()).sort((a, b) => b.totalWht - a.totalWht);
+}

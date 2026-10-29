@@ -441,7 +441,13 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'tax' && <Pnd90Dashboard invoices={invoices} />}
+        {activeTab === 'tax' && (
+          <Pnd90Dashboard
+            invoices={invoices}
+            issuer={issuer}
+            onToggle50Tawi={handleToggle50Tawi}
+          />
+        )}
 
         {activeTab === 'profile' && (
           <IssuerProfileView

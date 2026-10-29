@@ -129,6 +129,33 @@ async function runAudit() {
   });
   await new Promise(r => setTimeout(r, 400));
   await checkHorizontalOverflow('Tablet-Tax');
+
+  // Test opening 50 Tawi Reminder Modal
+  const tawiModalTriggered = await page.evaluate(() => {
+    const btns = Array.from(document.querySelectorAll('button'));
+    const b = btns.find(btn => btn.textContent && btn.textContent.includes('ทวงใบ 50 ทวิ'));
+    if (b) {
+      b.click();
+      return true;
+    }
+    return false;
+  });
+  if (tawiModalTriggered) {
+    await new Promise(r => setTimeout(r, 400));
+    await checkHorizontalOverflow('Tablet-Tawi-Modal');
+    const hasModal = await page.evaluate(() => {
+      const h = Array.from(document.querySelectorAll('h3')).find(el => el.textContent.includes('รายการใบ 50 ทวิ'));
+      return h !== undefined && h !== null;
+    });
+    console.log(`[Tablet] 50 Tawi Reminder Modal opened with client breakdown: ${hasModal ? 'PASS' : 'FAIL'}`);
+    await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'tablet-768-tawi-modal.png') });
+    await page.evaluate(() => {
+      const closeBtn = document.querySelector('button[aria-label="ปิดหน้าต่าง"]');
+      if (closeBtn) closeBtn.click();
+    });
+    await new Promise(r => setTimeout(r, 300));
+  }
+
   await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'tablet-768-tax.png') });
   console.log('[Tablet] Screenshots saved to screenshots/tablet-768-*.png\n');
 

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Invoice, loadDeductionProfile, saveDeductionProfile } from '../domain/storage';
+import { Invoice, IssuerProfile, loadDeductionProfile, saveDeductionProfile } from '../domain/storage';
 import { aggregatePnd90, estimatePnd90Tax, TaxCategory, TaxDeductionProfile, DEFAULT_DEDUCTION_PROFILE } from '../domain/tax';
 import { downloadPnd90Csv } from '../utils/exportCsv';
+import { TawiReminderModal } from './TawiReminderModal';
 import {
   Calculator,
   AlertTriangle,
@@ -16,16 +17,20 @@ import {
   ChevronUp,
   RotateCcw,
   Receipt,
-  FileText
+  FileText,
+  MessageSquare
 } from 'lucide-react';
 
 interface Props {
   invoices: Invoice[];
+  issuer?: IssuerProfile;
+  onToggle50Tawi?: (invoiceId: string) => void;
 }
 
-export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
+export const Pnd90Dashboard: React.FC<Props> = ({ invoices, issuer, onToggle50Tawi }) => {
   const [deductions, setDeductions] = useState<TaxDeductionProfile>(loadDeductionProfile);
   const [showDeductionEditor, setShowDeductionEditor] = useState<boolean>(false);
+  const [showTawiModal, setShowTawiModal] = useState<boolean>(false);
 
   const summary = aggregatePnd90(invoices);
   const taxEstimate = estimatePnd90Tax(summary, deductions);
@@ -162,10 +167,32 @@ export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
                 ? '⚠️ เอกสารใบ 50 ทวิ จำเป็นต้องใช้เป็นหลักฐานหากสรรพากรขอตรวจคืนเงินภาษี'
                 : '✨ หลักฐานใบ 50 ทวิ ครบถ้วน พร้อมกรอกยื่น ภ.ง.ด. 90 ได้ทันที'}
             </p>
+
+            {summary.pending50TawiTotal > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowTawiModal(true)}
+                className="mt-3.5 w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/90 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs active:scale-95"
+                title="ดูสรุปรายการใบ 50 ทวิ ที่ยังรอรับแยกตามผู้ว่าจ้าง พร้อมส่งข้อความทวงผ่าน LINE"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-amber-700" />
+                <span>ทวงใบ 50 ทวิ ({summary.pending50TawiTotal} ฉบับ)</span>
+              </button>
+            )}
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-slate-500">ยื่นแบบออนไลน์:</span>
+            {summary.pending50TawiTotal > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowTawiModal(true)}
+                className="text-amber-700 hover:text-amber-900 font-semibold cursor-pointer underline flex items-center gap-1"
+              >
+                <MessageSquare className="w-3 h-3" /> รายการค้างทวง
+              </button>
+            ) : (
+              <span className="text-slate-500">ยื่นแบบออนไลน์:</span>
+            )}
             <a
               href="https://efiling.rd.go.th"
               target="_blank"
@@ -509,6 +536,14 @@ export const Pnd90Dashboard: React.FC<Props> = ({ invoices }) => {
           </div>
         </div>
       </div>
+
+      <TawiReminderModal
+        isOpen={showTawiModal}
+        onClose={() => setShowTawiModal(false)}
+        invoices={invoices}
+        issuer={issuer}
+        onToggle50Tawi={onToggle50Tawi}
+      />
     </div>
   );
 };

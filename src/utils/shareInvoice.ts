@@ -1,4 +1,5 @@
 import { Invoice, IssuerProfile } from '../domain/storage';
+import { ClientPendingTawiGroup } from '../domain/tax';
 import { thaiBahtText } from './thaiBaht';
 
 /**
@@ -70,4 +71,36 @@ export function decodeInvoiceFromShareParam(param: string): { invoice: Invoice; 
     console.error('Failed to decode shared invoice:', err);
     return null;
   }
+}
+
+/**
+ * Generates a formal, polite Thai request message to ask a client for pending 50 Tawi tax certificates.
+ */
+export function formatTawiReminderMessage(group: ClientPendingTawiGroup, issuerName?: string): string {
+  const invLines = group.invoices
+    .map(i => `• เลขที่ ${i.invoiceNumber} (${i.issueDate}): ยอด ฿${i.subtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}, หัก 3%: ฿${i.whtAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`)
+    .join('\n');
+
+  return `เรียน ${group.clientName}
+
+เรื่อง: ขอความอนุเคราะห์จัดส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย (ใบ 50 ทวิ)
+
+ตามที่ได้มีการส่งมอบงานและรับชำระเงินตามรายการดังต่อไปนี้:
+${invLines}
+
+💰 สรุปยอดรวม:
+• ยอดรวมก่อนหัก: ฿${group.totalGross.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+• ภาษีหัก ณ ที่จ่าย 3% รวม: ฿${group.totalWht.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+
+เนื่องจากขณะนี้ถึงกำหนดรวบรวมเอกสารประกอบการยื่นแบบแสดงรายการภาษีเงินได้บุคคลธรรมดา (ภ.ง.ด. 90) จึงใคร่ขอความอนุเคราะห์ทางฝ่ายบัญชี/การเงิน ช่วยจัดส่งไฟล์สแกนหรือเอกสารใบ 50 ทวิ ให้ด้วยนะครับ
+
+${issuerName ? `ขอแสดงความนับถือ\n${issuerName}` : 'ขอบคุณมากครับ'}`;
+}
+
+/**
+ * Creates a direct LINE app open URL with the pre-filled reminder message.
+ */
+export function generateLineTawiReminderUrl(group: ClientPendingTawiGroup, issuerName?: string): string {
+  const text = formatTawiReminderMessage(group, issuerName);
+  return `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
 }

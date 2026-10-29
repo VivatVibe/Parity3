@@ -585,4 +585,82 @@ assert.strictEqual(optResult.isRefund, true, 'With deductions, freelancer now re
 assert.strictEqual(optResult.balance, -900, 'Refund balance is exact -900 THB');
 console.log('✓ Thai Revenue Department PND 90 Comprehensive Tax Calculation Engine passed.');
 
+// Check 11: Pending 50 Tawi Grouping and 1-Click Reminder Generator
+function groupPending50TawiByClient(invoices) {
+  const groupsMap = new Map();
+
+  for (const inv of invoices) {
+    if (inv.status === 'cancelled' || inv.has50Tawi) continue;
+    const key = (inv.clientName || 'ไม่ระบุชื่อผู้ว่าจ้าง').trim();
+
+    let existing = groupsMap.get(key);
+    if (!existing) {
+      existing = {
+        clientName: key,
+        clientTaxId: inv.clientTaxId,
+        invoices: [],
+        totalGross: 0,
+        totalWht: 0
+      };
+      groupsMap.set(key, existing);
+    }
+    existing.invoices.push(inv);
+    existing.totalGross = roundCurrency(existing.totalGross + inv.subtotal);
+    existing.totalWht = roundCurrency(existing.totalWht + inv.whtAmount);
+    if (!existing.clientTaxId && inv.clientTaxId) {
+      existing.clientTaxId = inv.clientTaxId;
+    }
+  }
+
+  return Array.from(groupsMap.values()).sort((a, b) => b.totalWht - a.totalWht);
+}
+
+function formatTawiReminderMessage(group, issuerName) {
+  const invLines = group.invoices
+    .map(i => `• เลขที่ ${i.invoiceNumber} (${i.issueDate}): ยอด ฿${i.subtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}, หัก 3%: ฿${i.whtAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`)
+    .join('\n');
+
+  return `เรียน ${group.clientName}
+
+เรื่อง: ขอความอนุเคราะห์จัดส่งหนังสือรับรองการหักภาษี ณ ที่จ่าย (ใบ 50 ทวิ)
+
+ตามที่ได้มีการส่งมอบงานและรับชำระเงินตามรายการดังต่อไปนี้:
+${invLines}
+
+💰 สรุปยอดรวม:
+• ยอดรวมก่อนหัก: ฿${group.totalGross.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+• ภาษีหัก ณ ที่จ่าย 3% รวม: ฿${group.totalWht.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+
+เนื่องจากขณะนี้ถึงกำหนดรวบรวมเอกสารประกอบการยื่นแบบแสดงรายการภาษีเงินได้บุคคลธรรมดา (ภ.ง.ด. 90) จึงใคร่ขอความอนุเคราะห์ทางฝ่ายบัญชี/การเงิน ช่วยจัดส่งไฟล์สแกนหรือเอกสารใบ 50 ทวิ ให้ด้วยนะครับ
+
+${issuerName ? `ขอแสดงความนับถือ\n${issuerName}` : 'ขอบคุณมากครับ'}`;
+}
+
+const mockTawiInvoices = [
+  { id: '1', invoiceNumber: 'INV-001', issueDate: '2026-03-01', clientName: 'บจก. เอ บิสซิเนส', clientTaxId: '0105550000001', subtotal: 50000, whtAmount: 1500, has50Tawi: false, status: 'paid' },
+  { id: '2', invoiceNumber: 'INV-002', issueDate: '2026-03-15', clientName: 'บจก. เอ บิสซิเนส', clientTaxId: '0105550000001', subtotal: 30000, whtAmount: 900, has50Tawi: false, status: 'paid' },
+  { id: '3', invoiceNumber: 'INV-003', issueDate: '2026-03-20', clientName: 'บจก. บี โกลบอล', clientTaxId: '0105550000002', subtotal: 100000, whtAmount: 3000, has50Tawi: false, status: 'paid' },
+  { id: '4', invoiceNumber: 'INV-004', issueDate: '2026-03-25', clientName: 'บจก. บี โกลบอล', clientTaxId: '0105550000002', subtotal: 20000, whtAmount: 600, has50Tawi: true, status: 'paid' },
+  { id: '5', invoiceNumber: 'INV-005', issueDate: '2026-03-28', clientName: 'บจก. ซี เทรดดิ้ง', clientTaxId: '0105550000003', subtotal: 10000, whtAmount: 300, has50Tawi: false, status: 'cancelled' }
+];
+
+const pendingGroups = groupPending50TawiByClient(mockTawiInvoices);
+assert.strictEqual(pendingGroups.length, 2, 'Must have exactly 2 client groups with pending 50 Tawi');
+assert.strictEqual(pendingGroups[0].clientName, 'บจก. บี โกลบอล', 'Highest WHT (3000 THB) must be first');
+assert.strictEqual(pendingGroups[0].totalWht, 3000, 'Pending WHT for Client B must be 3000 THB');
+assert.strictEqual(pendingGroups[0].invoices.length, 1, 'Client B has 1 pending invoice (invoice 4 already has tawi)');
+assert.strictEqual(pendingGroups[1].clientName, 'บจก. เอ บิสซิเนส', 'Second client is Client A');
+assert.strictEqual(pendingGroups[1].totalGross, 80000, 'Client A total gross is 50k + 30k = 80k');
+assert.strictEqual(pendingGroups[1].totalWht, 2400, 'Client A total WHT is 1500 + 900 = 2400');
+assert.strictEqual(pendingGroups[1].invoices.length, 2, 'Client A has 2 pending invoices');
+
+const reminderMsg = formatTawiReminderMessage(pendingGroups[1], 'นายวิวัฒน์ (ฟรีแลนซ์)');
+assert(reminderMsg.includes('เรียน บจก. เอ บิสซิเนส'), 'Must address Client A');
+assert(reminderMsg.includes('INV-001'), 'Must include invoice 1');
+assert(reminderMsg.includes('INV-002'), 'Must include invoice 2');
+assert(reminderMsg.includes('2,400.00'), 'Must include total WHT 2,400.00');
+assert(reminderMsg.includes('นายวิวัฒน์ (ฟรีแลนซ์)'), 'Must include issuer name sign-off');
+assert(reminderMsg.includes('ภ.ง.ด. 90'), 'Must cite PND 90 context');
+console.log('✓ Pending 50 Tawi Grouping and 1-Click Reminder Generator passed.');
+
 console.log('\nAll domain verification tests passed successfully!');
